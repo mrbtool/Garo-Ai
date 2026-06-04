@@ -29,6 +29,7 @@
             display: flex;
             justify-content: center;
             height: 100vh;
+            overflow: hidden; /* Prevent body scroll */
         }
 
         /* Mobile Container */
@@ -46,18 +47,9 @@
 
         /* --- Login Screen --- */
         #loginScreen {
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            height: 100%;
-            width: 100%;
-            background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
-            padding: 20px;
-            text-align: center;
-            position: absolute;
-            top: 0; left: 0;
-            z-index: 50;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%; width: 100%; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            padding: 20px; text-align: center; position: absolute; top: 0; left: 0; z-index: 50;
         }
         .login-logo { font-size: 54px; color: var(--primary); margin-bottom: 20px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); }
         .login-title { font-size: 28px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; letter-spacing: -0.5px;}
@@ -66,8 +58,7 @@
             display: flex; align-items: center; justify-content: center; gap: 12px;
             background: var(--white); color: #3c4043; border: 1px solid #dadce0;
             padding: 14px 24px; border-radius: 30px; font-size: 16px; font-weight: 600;
-            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s ease;
-            width: 90%; max-width: 300px;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s ease; width: 90%; max-width: 300px;
         }
         .btn-google:hover { background: #f8f9fa; box-shadow: 0 6px 16px rgba(0,0,0,0.08); transform: translateY(-1px);}
         .btn-google img { width: 22px; height: 22px; }
@@ -80,10 +71,10 @@
         .header h1 { font-size: 20px; color: var(--text-dark); }
 
         /* Main Content */
-        .main-content { flex: 1; overflow-y: auto; position: relative; display: flex; flex-direction: column; overflow-x: hidden;}
+        .main-content { flex: 1; overflow-y: auto; position: relative; display: flex; flex-direction: column; overflow-x: hidden; scroll-behavior: smooth;}
 
         /* --- Translate Section --- */
-        #sectionTranslate { padding: 20px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
+        #sectionTranslate { padding: 20px 20px 140px 20px; display: flex; flex-direction: column; gap: 15px; flex: 1; }
         .lang-selectors { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
         .lang-selectors select { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #E2E8F0; outline: none; font-size: 14px; background: var(--white); color: var(--text-dark); font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
         .btn-swap { background: transparent; border: none; color: var(--primary); cursor: pointer; font-size: 18px; padding: 5px; transition: transform 0.2s;}
@@ -100,7 +91,17 @@
         .chat-bubble { max-width: 80%; padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; }
         .chat-ai { background-color: var(--ai-chat-bg); color: var(--text-dark); align-self: flex-start; border-bottom-left-radius: 4px; }
         .chat-user { background-color: var(--user-chat-bg); color: var(--white); align-self: flex-end; border-bottom-right-radius: 4px; }
-        .chat-input-container { background-color: var(--white); padding: 12px 16px; display: flex; align-items: center; gap: 10px; box-shadow: 0 -2px 8px rgba(0,0,0,0.05); }
+        
+        .chat-input-container { 
+            background-color: var(--white); 
+            padding: 12px 16px 100px 16px; /* High padding to sit perfectly behind overlay nav */
+            display: flex; align-items: center; gap: 10px; 
+            box-shadow: 0 -4px 15px rgba(0,0,0,0.03); 
+            transition: padding 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        .chat-input-container.nav-hidden-padding {
+            padding-bottom: 16px; /* Shrinks cleanly when nav hides */
+        }
         .chat-input-container input { flex: 1; border: 1px solid #E2E8F0; border-radius: 20px; padding: 12px 16px; font-size: 15px; outline: none; }
         .btn-send { background-color: var(--primary); color: var(--white); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; cursor: pointer; transition: opacity 0.2s; }
         .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -115,12 +116,10 @@
         @keyframes blink { 50% { opacity: 0; } }
 
         /* --- Premium Profile Section --- */
-        #sectionProfile { display: none; flex-direction: column; padding: 20px; gap: 20px; flex: 1; background: #F1F5F9;}
-        
+        #sectionProfile { display: none; flex-direction: column; padding: 20px 20px 140px 20px; gap: 20px; flex: 1; background: #F1F5F9;}
         .profile-header { background: var(--white); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
         .profile-header img { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #E2E8F0; object-fit: cover; }
         .profile-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; overflow: hidden; width: 100%;}
-        
         .profile-name { color: var(--text-dark); font-size: 18px; margin: 0; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
         .profile-id { font-size: 11px; color: var(--secondary); font-weight: 700; background: #F1F5F9; padding: 2px 8px; border-radius: 12px; letter-spacing: 0.5px;}
         .profile-email-container { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; margin-bottom: 4px; }
@@ -144,16 +143,42 @@
         .menu-left { display: flex; align-items: center; gap: 14px; font-size: 15px; color: var(--text-dark); font-weight: 500; }
         .menu-left i { font-size: 18px; color: var(--secondary); width: 24px; text-align: center; }
         .menu-right i { font-size: 14px; color: #CBD5E1; }
+        .menu-danger .menu-left, .menu-danger .menu-left i { color: #ef233c; }
+
+        /* --- Floating Bottom Overlay Layout --- */
+        .bottom-overlay-container {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 0 16px 16px 16px;
+            z-index: 20;
+            pointer-events: none; /* Let clicks pass through empty areas */
+            display: flex; flex-direction: column; gap: 8px;
+            transition: opacity 0.4s cubic-bezier(0.25, 1, 0.5, 1), transform 0.4s cubic-bezier(0.25, 1, 0.5, 1);
+        }
         
-        .menu-danger .menu-left { color: #ef233c; }
-        .menu-danger .menu-left i { color: #ef233c; }
+        .bottom-overlay-container.nav-hidden {
+            opacity: 0;
+            transform: translateY(120%);
+        }
 
-        /* --- Disclaimer Text --- */
-        .disclaimer-text { font-size: 11px; text-align: center; color: #888; padding: 8px 16px; background: var(--white); box-shadow: 0 -1px 3px rgba(0,0,0,0.02); z-index: 5;}
+        .disclaimer-text {
+            font-size: 11px; text-align: center; color: #64748B;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+            padding: 4px 14px; border-radius: 12px; margin: 0 auto;
+            width: fit-content; text-shadow: 0 1px 1px rgba(255,255,255,0.8);
+        }
 
-        /* --- Bottom Navigation --- */
-        .bottom-nav { background-color: var(--white); display: flex; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 10;}
-        .nav-item { flex: 1; padding: 12px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: var(--secondary); transition: color 0.2s;}
+        .bottom-nav {
+            background-color: rgba(255, 255, 255, 0.85);
+            backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+            display: flex; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            border-radius: 24px; pointer-events: auto; /* Re-enable clicks */
+            border: 1px solid rgba(255,255,255,0.5);
+            padding: 4px 0;
+        }
+
+        .nav-item { flex: 1; padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: var(--secondary); transition: color 0.2s; }
         .nav-item.active { color: var(--primary); font-weight: bold; }
         .nav-item i { font-size: 20px; }
         .nav-item span { font-size: 12px; }
@@ -204,12 +229,10 @@
     <div id="appMain">
         <div class="header">
             <h1 id="headerTitle">Translate</h1>
-            <!-- Replaced top right logout with a simple decorative icon or leave empty. 
-                 Using settings gear that maps to profile for better UX -->
             <i class="fa-solid fa-gear" style="color: var(--secondary); font-size: 20px; cursor: pointer;" onclick="document.getElementById('navProfile').click()"></i>
         </div>
 
-        <div class="main-content">
+        <div class="main-content" id="mainContentScroll">
             <!-- Translate Tab -->
             <div id="sectionTranslate">
                 <div class="lang-selectors">
@@ -244,7 +267,7 @@
             <!-- AI Chat Tab -->
             <div id="sectionChat">
                 <div class="chat-scroll" id="chatScroll"></div>
-                <div class="chat-input-container">
+                <div class="chat-input-container" id="chatInputContainer">
                     <input type="text" id="inputChat" placeholder="Type a message...">
                     <button class="btn-send" id="btnSendChat"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
@@ -292,22 +315,24 @@
                     </div>
                     <div class="profile-menu-item menu-danger" id="btnProfileLogout">
                         <div class="menu-left"><i class="fa-solid fa-right-from-bracket"></i>Logout Securely</div>
-                    <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
                 </div>
             </div>
         </div>
 
-        <!-- AI Disclaimer Text -->
-        <div class="disclaimer-text">
-            Sorry, Garo AI may make mistakes, it will improve later 🙂
+        <!-- OVERLAY BOTTOM NAVIGATION -->
+        <div class="bottom-overlay-container" id="bottomOverlay">
+            <div class="disclaimer-text">
+                Sorry, Garo AI may make mistakes, it will improve later 🙂
+            </div>
+            <div class="bottom-nav">
+                <div class="nav-item active" id="navTranslate"><i class="fa-solid fa-language"></i><span>Translate</span></div>
+                <div class="nav-item" id="navChat"><i class="fa-solid fa-robot"></i><span>AI Chat</span></div>
+                <div class="nav-item" id="navProfile"><i class="fa-solid fa-user"></i><span>Profile</span></div>
+            </div>
         </div>
 
-        <!-- Bottom Navigation -->
-        <div class="bottom-nav">
-            <div class="nav-item active" id="navTranslate"><i class="fa-solid fa-language"></i><span>Translate</span></div>
-            <div class="nav-item" id="navChat"><i class="fa-solid fa-robot"></i><span>AI Chat</span></div>
-            <div class="nav-item" id="navProfile"><i class="fa-solid fa-user"></i><span>Profile</span></div>
-        </div>
     </div>
 
     <!-- App Update Modal -->
@@ -399,10 +424,12 @@
     const btnGoogleLogin = document.getElementById("btnGoogleLogin");
 
     const headerTitle = document.getElementById("headerTitle");
+    const mainContentScroll = document.getElementById("mainContentScroll");
     const sectionTranslate = document.getElementById("sectionTranslate");
     const sectionChat = document.getElementById("sectionChat");
     const sectionProfile = document.getElementById("sectionProfile");
     
+    const bottomOverlay = document.getElementById("bottomOverlay");
     const navTranslate = document.getElementById("navTranslate");
     const navChat = document.getElementById("navChat");
     const navProfile = document.getElementById("navProfile");
@@ -418,6 +445,7 @@
     const chatScroll = document.getElementById("chatScroll");
     const inputChat = document.getElementById("inputChat");
     const btnSendChat = document.getElementById("btnSendChat");
+    const chatInputContainer = document.getElementById("chatInputContainer");
     let typingIndicatorElement = null;
 
     const premiumModal = document.getElementById("premiumModal");
@@ -443,7 +471,6 @@
     // --- AUTHENTICATION STATE OBSERVER ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            // User is logged in
             currentUserEmail = user.email;
             currentUserName = user.displayName || "Garo AI User";
             currentUserUid = user.uid;
@@ -456,7 +483,6 @@
                 appInitialized = true;
             }
         } else {
-            // User is logged out
             loginScreen.style.display = "flex";
             appMain.style.display = "none";
             appInitialized = false;
@@ -472,14 +498,11 @@
     btnProfileLogout.onclick = () => {
         signOut(auth).then(() => {
             showToast("Logged out securely");
-        }).catch((error) => {
-            showToast("Logout error");
-        });
+        }).catch((error) => { showToast("Logout error"); });
     };
 
     // --- MAIN APP INITIALIZATION ---
     function initMainApp(user) {
-        // Initial Chat Greeting
         const initialGreeting = "Na·a namengama? I am your advanced AI Assistant. I can understand and speak English, but I specialize perfectly in the Garo language (A·chikku). How can I help you today?";
         addChatMessage(initialGreeting, false, true);
         
@@ -489,11 +512,9 @@
 
     // --- PROFILE UTILS ---
     function generateShortId(uid) {
-        // Deterministic 6-digit ID based on UID
         let hash = 0;
         for (let i = 0; i < uid.length; i++) {
-            hash = ((hash << 5) - hash) + uid.charCodeAt(i);
-            hash |= 0; 
+            hash = ((hash << 5) - hash) + uid.charCodeAt(i); hash |= 0; 
         }
         return String(Math.abs(hash)).padStart(6, '0').slice(0, 6);
     }
@@ -501,8 +522,7 @@
     function maskEmail(email) {
         const parts = email.split('@');
         if(parts.length !== 2) return email;
-        const name = parts[0];
-        const domain = parts[1];
+        const name = parts[0]; const domain = parts[1];
         if (name.length <= 2) return email;
         return name[0] + '*'.repeat(name.length > 5 ? 4 : name.length - 2) + name[name.length - 1] + '@' + domain;
     }
@@ -510,11 +530,8 @@
     function setupProfileData(user) {
         profileName.innerText = currentUserName;
         profileUserId.innerText = `ID: #${generateShortId(currentUserUid)}`;
-        
-        // Avatar
         profileAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=4361EE&color=fff&size=150`;
         
-        // Email Toggle Logic
         isEmailMasked = true;
         profileEmailText.innerText = maskEmail(currentUserEmail);
         profileEmailEye.className = "fa-solid fa-eye-slash";
@@ -523,11 +540,40 @@
             isEmailMasked = !isEmailMasked;
             profileEmailText.innerText = isEmailMasked ? maskEmail(currentUserEmail) : currentUserEmail;
             profileEmailEye.className = isEmailMasked ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
-            profileEmailEye.style.color = isEmailMasked ? "var(--primary)" : "#ef233c";
+            profileEmailEye.style.color = isEmailMasked ? "var(--primary)" : "#64748B";
         };
-        
         updateUsageUI();
     }
+
+    // --- SMART SCROLL LISTENER (OVERLAY NAV) ---
+    let lastScrollYMain = 0;
+    let lastScrollYChat = 0;
+
+    function toggleNavVisibility(hide) {
+        if (hide) {
+            bottomOverlay.classList.add("nav-hidden");
+            chatInputContainer.classList.add("nav-hidden-padding");
+        } else {
+            bottomOverlay.classList.remove("nav-hidden");
+            chatInputContainer.classList.remove("nav-hidden-padding");
+        }
+    }
+
+    mainContentScroll.addEventListener("scroll", (e) => {
+        if (currentTab === "chat") return; 
+        const currentY = e.target.scrollTop;
+        if (currentY > lastScrollYMain && currentY > 20) { toggleNavVisibility(true); } 
+        else { toggleNavVisibility(false); }
+        lastScrollYMain = currentY;
+    });
+
+    chatScroll.addEventListener("scroll", (e) => {
+        if (currentTab !== "chat") return;
+        const currentY = e.target.scrollTop;
+        if (currentY > lastScrollYChat && currentY > 20) { toggleNavVisibility(true); } 
+        else { toggleNavVisibility(false); }
+        lastScrollYChat = currentY;
+    });
 
     // --- UI NAVIGATION LOGIC ---
     navTranslate.onclick = () => switchTab("translate");
@@ -536,6 +582,7 @@
 
     function switchTab(tabName) {
         currentTab = tabName;
+        toggleNavVisibility(false); // Reset nav state on tab switch
         
         sectionTranslate.style.display = (tabName === "translate") ? "flex" : "none";
         sectionChat.style.display = (tabName === "chat") ? "flex" : "none";
@@ -548,7 +595,7 @@
         if (tabName === "translate") headerTitle.innerText = "Translate";
         if (tabName === "chat") {
             headerTitle.innerText = "AI Chat";
-            chatScroll.scrollTop = chatScroll.scrollHeight;
+            setTimeout(()=> { chatScroll.scrollTop = chatScroll.scrollHeight; }, 50);
         }
         if (tabName === "profile") {
             headerTitle.innerText = "My Profile";
@@ -606,11 +653,9 @@
         document.getElementById("profileUsage").innerText = `${isPremium ? 'Unlimited' : usageCount + ' / ' + dailyLimit}`;
         
         if (isPremium) {
-            profileBadge.innerText = "Premium";
-            profileBadge.className = "badge premium";
+            profileBadge.innerText = "Premium"; profileBadge.className = "badge premium";
         } else {
-            profileBadge.innerText = "Free Plan";
-            profileBadge.className = "badge free";
+            profileBadge.innerText = "Free Plan"; profileBadge.className = "badge free";
         }
     }
 
@@ -740,10 +785,8 @@
             img.onload = function() {
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
-                let targetWidth = 150; 
-                let scale = targetWidth / img.width;
-                let width = img.width * scale;
-                let height = img.height * scale;
+                let scale = 150 / img.width;
+                let width = img.width * scale; let height = img.height * scale;
                 canvas.width = width; canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
 
@@ -816,9 +859,7 @@
 
                 querySnapshot.forEach((doc) => {
                     const data = doc.data();
-                    const dbSource = data.source_lang || "English";
-                    const dbTarget = data.target_lang || "Garo";
-                    if (dbSource === sourceLang && dbTarget === targetLang) {
+                    if ((data.source_lang || "English") === sourceLang && (data.target_lang || "Garo") === targetLang) {
                         foundTranslation = data.translated;
                     }
                 });
@@ -829,7 +870,6 @@
                 }
 
                 outputText.innerText = "Translating with AI...";
-                
                 let prompt = `Translate the following ${sourceLang} text to ${targetLang} language. Provide ONLY the exact translation, no explanations. `;
                 
                 if (targetLang === "Garo") {
@@ -840,8 +880,7 @@
                 prompt += `Text to translate: ${text}`;
 
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] })
                 });
 
@@ -858,7 +897,6 @@
                 }
 
             } catch (e) {
-                console.error(e);
                 outputText.innerText = "AI Error: Check server connection.";
                 btnTranslate.disabled = false;
                 logAdminAlert("API Translation Failure: " + e.message);
@@ -874,7 +912,6 @@
 
         inputChat.value = "";
         addChatMessage(userText, true, false);
-        
         showTypingIndicator();
 
         checkLimitAndProceed(async () => {
@@ -884,8 +921,7 @@
                 chatHistory.push({ role: "user", parts: [{ text: systemContext }] });
 
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ contents: chatHistory })
                 });
 
