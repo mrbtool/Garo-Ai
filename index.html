@@ -239,7 +239,13 @@
         .modal-card h2 { font-size: 18px; color: var(--text-dark); margin-bottom: -5px;}
         .modal-card p { font-size: 14px; color: #475569; line-height: 1.5; }
         
-        /* General Info Modal Content formatting */
+        /* Plan Item Styles */
+        .plan-item { border: 1px solid #E2E8F0; border-radius: 12px; padding: 16px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; transition: all 0.2s; margin-bottom: 4px; background: #fff;}
+        .plan-item:active { transform: scale(0.98); border-color: var(--primary); background: #F8FAFC; }
+        .plan-info { display: flex; flex-direction: column; gap: 4px; }
+        .plan-name { font-weight: bold; color: var(--text-dark); font-size: 15px; }
+        .plan-price { color: var(--primary); font-weight: 800; font-size: 16px; }
+
         .info-content { font-size: 13px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 5px; max-height: 40vh; overflow-y: auto;}
 
         .modal-card img.qr-img { width: 100%; height: auto; max-height: 200px; background: #eee; object-fit: contain; border-radius: 8px;}
@@ -381,7 +387,6 @@
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
                     
-                    <!-- Modified to Open Interactive Info Modals -->
                     <div class="profile-menu-item" onclick="openInfoModal('About Garo AI', 'Version: ' + CURRENT_APP_VERSION + '\n\nGaro AI is an advanced language model built securely and dedicated to providing A·chikku translation and interaction. Developed continuously by Mr Bush X.')">
                         <div class="menu-left"><i class="fa-solid fa-circle-info"></i>About App</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
@@ -394,7 +399,7 @@
                         <div class="menu-left"><i class="fa-solid fa-file-contract"></i>Terms of Service</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
-                    <div class="profile-menu-item" onclick="openInfoModal('FAQ & Support', 'Q: How do I upgrade my account?\nA: Navigate to the Membership tab (Crown Icon), click upgrade, and submit your UTR.\n\nQ: Who built Garo AI?\nA: It was created by Mr Bush X.')">
+                    <div class="profile-menu-item" onclick="openInfoModal('FAQ & Support', 'Q: How do I upgrade my account?\nA: Navigate to the Membership tab (Crown Icon), choose a plan, and submit your payment proof.\n\nQ: Who built Garo AI?\nA: It was created by Mr Bush X.')">
                         <div class="menu-left"><i class="fa-solid fa-circle-question"></i>FAQ</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
@@ -451,11 +456,25 @@
             </div>
         </div>
     </div>
+    
+    <!-- Select Plans List Modal -->
+    <div class="modal-overlay" id="plansListModal">
+        <div class="modal-card">
+            <h2>Select a Premium Plan</h2>
+            <p style="margin-bottom: 5px;">Choose a package to remove daily free limits.</p>
+            <div id="plansContainer" style="display: flex; flex-direction: column; gap: 8px; margin-top: 10px; max-height: 40vh; overflow-y: auto;">
+                <!-- Dynamic Plans -->
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="document.getElementById('plansListModal').style.display='none'">Cancel</button>
+            </div>
+        </div>
+    </div>
 
-    <!-- Premium Upgrade / Payment Modal -->
+    <!-- Premium Upgrade / Payment Modal (Dynamic QR) -->
     <div class="modal-overlay" id="premiumModal">
         <div class="modal-card">
-            <h2>Premium Upgrade Required</h2>
+            <h2>Payment Details</h2>
             <p id="premiumMsg">Scan the QR code below to pay. Remove daily free limits and get unrestricted access.</p>
             <img id="qrImage" class="qr-img" src="" alt="QR Code" style="display: none;">
             
@@ -469,7 +488,7 @@
             </div>
 
             <div class="modal-actions">
-                <button class="btn-modal btn-cancel" id="btnCloseModal">Close</button>
+                <button class="btn-modal btn-cancel" id="btnCloseModal">Back</button>
                 <button class="btn-modal btn-submit" id="btnSubmitUtr">Submit Proof</button>
             </div>
         </div>
@@ -514,15 +533,16 @@
     let appInitialized = false;
     let currentTab = "translate";
     
-    // Chat State
+    // Chat & Membership State
     let chatHistory = [];
     let currentSessionId = null;
+    let membershipPlans = [];
     
     // Server Configs
     let dynamicApiKey = "";
     let dailyLimit = 10;
     let isPremium = false;
-    let qrImageUrl = ""; 
+    let defaultQrImageUrl = ""; 
     let compressedProofBase64 = "";
     let updateLinkUrl = "";
 
@@ -566,6 +586,8 @@
     const historyListContainer = document.getElementById("historyListContainer");
 
     // Modal DOM
+    const plansListModal = document.getElementById("plansListModal");
+    const plansContainer = document.getElementById("plansContainer");
     const premiumModal = document.getElementById("premiumModal");
     const btnCloseModal = document.getElementById("btnCloseModal");
     const btnSubmitUtr = document.getElementById("btnSubmitUtr");
@@ -592,17 +614,53 @@
     const profileAvatar = document.getElementById("profileAvatar");
     const btnProfileLogout = document.getElementById("btnProfileLogout");
 
-    // Make openInfoModal globally accessible for onclick attributes
     window.openInfoModal = function(title, content) {
         infoModalTitle.innerText = title;
         infoModalContent.innerText = content;
         infoModal.style.display = "flex";
     };
-
     btnCloseInfoModal.onclick = () => { infoModal.style.display = "none"; };
 
-    // Membership direct upgrade
-    btnMembershipUpgrade.onclick = () => { premiumModal.style.display = "flex"; };
+    // --- MEMBERSHIP UPGRADE TRIGGER ---
+    btnMembershipUpgrade.onclick = () => {
+        triggerUpgradeFlow();
+    };
+
+    function triggerUpgradeFlow() {
+        if (membershipPlans && membershipPlans.length > 0) {
+            plansContainer.innerHTML = "";
+            membershipPlans.forEach(plan => {
+                const div = document.createElement("div");
+                div.className = "plan-item";
+                div.innerHTML = `
+                    <div class="plan-info">
+                        <span class="plan-name">${plan.name || 'Premium Plan'}</span>
+                    </div>
+                    <div class="plan-price">${plan.price || 'Buy'}</div>
+                `;
+                div.onclick = () => selectPlanAndShowQR(plan);
+                plansContainer.appendChild(div);
+            });
+            plansListModal.style.display = "flex";
+        } else {
+            // Fallback to direct default QR if admin hasn't created plans yet
+            document.getElementById("premiumMsg").innerText = `Scan the QR code below to pay. Remove daily free limits and get unrestricted access.`;
+            qrImage.src = defaultQrImageUrl;
+            qrImage.style.display = defaultQrImageUrl ? "block" : "none";
+            premiumModal.style.display = "flex";
+        }
+    }
+
+    function selectPlanAndShowQR(plan) {
+        plansListModal.style.display = "none";
+        document.getElementById("premiumMsg").innerText = `You selected ${plan.name} (${plan.price}). Please scan the QR code below and submit proof.`;
+        
+        let targetQr = plan.qr_url || defaultQrImageUrl; 
+        qrImage.src = targetQr;
+        qrImage.style.display = targetQr ? "block" : "none";
+        
+        premiumModal.style.display = "flex";
+    }
 
     // --- VIEWPORT / KEYBOARD SIZING LOGIC ---
     function adjustForKeyboard() {
@@ -733,7 +791,6 @@
     attachStandardNavScrollLogic(sectionProfile);
     attachStandardNavScrollLogic(sectionMembership);
 
-    // Smart Scroll Logic specifically for AI Chat
     chatScroll.addEventListener("scroll", (e) => {
         if (currentTab !== "chat") return;
         const currentY = e.target.scrollTop;
@@ -875,9 +932,13 @@
                 if (data.gemini_api_key) dynamicApiKey = data.gemini_api_key;
                 if (data.daily_limit) dailyLimit = parseInt(data.daily_limit);
                 if (data.qr_image_url) {
-                    qrImageUrl = data.qr_image_url;
-                    qrImage.src = qrImageUrl;
-                    qrImage.style.display = "block";
+                    defaultQrImageUrl = data.qr_image_url;
+                }
+                
+                // Parse Dynamic Plans
+                if (data.membership_plans) {
+                    try { membershipPlans = JSON.parse(data.membership_plans); } 
+                    catch(e) { membershipPlans = []; }
                 }
 
                 if (data.update_available) {
@@ -982,7 +1043,7 @@
             if (currentTab === "translate") outputText.innerText = warningMsg;
             else if (currentTab === "chat") addChatMessage(warningMsg, false);
             
-            premiumModal.style.display = "flex";
+            triggerUpgradeFlow(); // Show dynamically created plans
             logAdminAlert("Limit Exceeded - Triggered Premium Wall for " + currentUserEmail);
         } else {
             localStorage.setItem(usageKeyCount, usageCount + 1);
@@ -991,6 +1052,7 @@
         }
     }
 
+    // Close Modals
     btnCloseModal.onclick = () => { premiumModal.style.display = "none"; };
 
     // --- ULTRA OPTIMIZED 20KB IMAGE COMPRESSION ---
@@ -1002,7 +1064,6 @@
                 const canvas = document.createElement('canvas');
                 const ctx = canvas.getContext('2d');
                 
-                // Max width 400px is perfect for 20KB while keeping UTR readable
                 let scale = Math.min(400 / img.width, 1);
                 let width = img.width * scale; 
                 let height = img.height * scale;
@@ -1011,11 +1072,10 @@
                 canvas.height = height;
                 ctx.drawImage(img, 0, 0, width, height);
 
-                let quality = 0.7; // Start at 70% quality
+                let quality = 0.7; 
                 let dataUrl = canvas.toDataURL('image/jpeg', quality);
                 let iterations = 0;
                 
-                // 20 KB is approx 27,500 Base64 characters
                 while (dataUrl.length > 27500 && iterations < 6) {
                     quality -= 0.1;
                     if (quality < 0.1) {
