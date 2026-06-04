@@ -2,7 +2,6 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <!-- Using interactive-widget=resizes-content to natively handle keyboard resizing without layout breaking -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Garo AI</title>
     <!-- FontAwesome for Icons -->
@@ -16,6 +15,7 @@
             --white: #FFFFFF;
             --user-chat-bg: #4361EE;
             --ai-chat-bg: #E2E8F0;
+            --app-height: 100dvh;
         }
 
         * {
@@ -39,18 +39,18 @@
             justify-content: center;
         }
 
-        /* Mobile Container - Height adapts cleanly via 100dvh now */
+        /* Mobile Container */
         .app-container {
             width: 100%;
             max-width: 480px;
             background-color: var(--bg-light);
-            height: 100%; 
-            height: 100dvh; 
+            height: var(--app-height); 
             display: flex;
             flex-direction: column;
             position: relative;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             overflow: hidden;
+            transition: height 0.2s ease;
         }
 
         /* --- Login Screen --- */
@@ -123,7 +123,7 @@
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             border-radius: 30px;
             border: 1px solid rgba(226, 232, 240, 0.8);
-            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
+            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, bottom 0.2s ease;
             z-index: 15; 
         }
         
@@ -134,13 +134,8 @@
         }
 
         .chat-input-container input { 
-            flex: 1; 
-            border: none; 
-            padding: 10px 0; 
-            font-size: 15px; 
-            outline: none; 
-            background: transparent;
-            color: var(--text-dark);
+            flex: 1; border: none; padding: 10px 0; font-size: 15px; 
+            outline: none; background: transparent; color: var(--text-dark);
         }
         .btn-send { background-color: var(--primary); color: var(--white); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0;}
         .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
@@ -154,6 +149,18 @@
         .typing-cursor::after { content: '|'; animation: blink 1s step-start infinite; }
         @keyframes blink { 50% { opacity: 0; } }
 
+        /* --- Membership Section --- */
+        #sectionMembership { display: none; flex-direction: column; padding: 20px 20px calc(110px + env(safe-area-inset-bottom)) 20px; gap: 20px; flex: 1; background: #F1F5F9; overflow-y: auto;}
+        .membership-card { background: var(--white); border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center; display: flex; flex-direction: column; gap: 12px;}
+        .membership-card i.crown-icon { font-size: 52px; color: #F59E0B; margin-bottom: 5px; }
+        .membership-card h2 { font-size: 22px; color: var(--text-dark); font-weight: 800;}
+        .membership-card p { font-size: 14px; color: var(--secondary); line-height: 1.5; padding: 0 10px;}
+        .features-list { display: flex; flex-direction: column; gap: 14px; text-align: left; background: #F8F9FA; padding: 18px; border-radius: 12px; border: 1px solid #E2E8F0; margin: 10px 0;}
+        .feature-item { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-dark); font-weight: 600;}
+        .feature-item i { color: #10B981; font-size: 18px; width: 20px; text-align: center;}
+        .btn-upgrade-main { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);}
+        .btn-upgrade-main:active { transform: scale(0.96); }
+
         /* --- Premium Profile Section --- */
         #sectionProfile { display: none; flex-direction: column; padding: 20px 20px calc(110px + env(safe-area-inset-bottom)) 20px; gap: 20px; flex: 1; background: #F1F5F9; overflow-y: auto;}
         .profile-header { background: var(--white); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
@@ -163,7 +170,6 @@
         .profile-id { font-size: 11px; color: var(--secondary); font-weight: 700; background: #F1F5F9; padding: 2px 8px; border-radius: 12px; letter-spacing: 0.5px;}
         .profile-email-container { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; margin-bottom: 4px; }
         .profile-email-container i { cursor: pointer; color: var(--primary); font-size: 14px; padding: 4px; transition: color 0.2s;}
-        .profile-email-container i:hover { color: #3a0ca3; }
         
         .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase;}
         .badge.free { background: #E2E8F0; color: #475569; }
@@ -188,17 +194,14 @@
         .bottom-overlay-container {
             position: absolute;
             bottom: calc(20px + env(safe-area-inset-bottom));
-            left: 20px; 
-            right: 20px;
+            left: 15px; right: 15px;
             z-index: 20;
             pointer-events: none;
             transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
         }
         
         .bottom-overlay-container.nav-hidden {
-            opacity: 0;
-            transform: translateY(150%);
-            pointer-events: none;
+            opacity: 0; transform: translateY(150%); pointer-events: none;
         }
 
         .bottom-nav {
@@ -208,14 +211,15 @@
             border-radius: 30px; 
             pointer-events: auto;
             border: 1px solid rgba(255,255,255,0.8);
-            padding: 4px 10px;
+            padding: 4px 6px;
             width: 100%;
         }
 
+        /* Nav Item Adjusted for 4 Items */
         .nav-item { flex: 1; padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: var(--secondary); transition: color 0.2s; }
         .nav-item.active { color: var(--primary); font-weight: bold; }
-        .nav-item i { font-size: 20px; }
-        .nav-item span { font-size: 12px; }
+        .nav-item i { font-size: 18px; }
+        .nav-item span { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;}
 
         /* --- Chat History Overlay Screen --- */
         #chatHistoryScreen {
@@ -234,6 +238,10 @@
         .modal-card { background: var(--white); width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);}
         .modal-card h2 { font-size: 18px; color: var(--text-dark); margin-bottom: -5px;}
         .modal-card p { font-size: 14px; color: #475569; line-height: 1.5; }
+        
+        /* General Info Modal Content formatting */
+        .info-content { font-size: 13px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 5px; max-height: 40vh; overflow-y: auto;}
+
         .modal-card img.qr-img { width: 100%; height: auto; max-height: 200px; background: #eee; object-fit: contain; border-radius: 8px;}
         .modal-card input[type="text"] { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; background: #F8F9FA; outline: none; }
         .upload-container { display: flex; flex-direction: column; gap: 8px; border: 1px dashed #cbd5e1; padding: 12px; border-radius: 8px; background: #F8F9FA;}
@@ -282,6 +290,7 @@
         </div>
 
         <div class="main-content" id="mainContentScroll">
+            
             <!-- Translate Tab -->
             <div id="sectionTranslate">
                 <div class="lang-selectors">
@@ -325,6 +334,24 @@
                 </div>
             </div>
 
+            <!-- New Membership Tab -->
+            <div id="sectionMembership">
+                <div class="membership-card">
+                    <i class="fa-solid fa-crown crown-icon"></i>
+                    <h2>Pro Membership</h2>
+                    <p>Upgrade your account to unlock full potential and remove daily limits.</p>
+                    
+                    <div class="features-list">
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Unlimited AI Translations</div>
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Unlimited Smart AI Chat</div>
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Premium Priority Speed</div>
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Support App Development</div>
+                    </div>
+
+                    <button class="btn-upgrade-main" id="btnMembershipUpgrade">Upgrade to Premium</button>
+                </div>
+            </div>
+
             <!-- Premium Profile Tab -->
             <div id="sectionProfile">
                 <div class="profile-header">
@@ -349,22 +376,26 @@
                 </div>
 
                 <div class="profile-menu">
-                    <!-- Chat History Button -->
                     <div class="profile-menu-item" id="btnOpenHistory">
                         <div class="menu-left"><i class="fa-solid fa-clock-rotate-left"></i>Chat History</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
                     
-                    <div class="profile-menu-item" onclick="showToast('Version: ' + CURRENT_APP_VERSION)">
+                    <!-- Modified to Open Interactive Info Modals -->
+                    <div class="profile-menu-item" onclick="openInfoModal('About Garo AI', 'Version: ' + CURRENT_APP_VERSION + '\n\nGaro AI is an advanced language model built securely and dedicated to providing A·chikku translation and interaction. Developed continuously by Mr Bush X.')">
                         <div class="menu-left"><i class="fa-solid fa-circle-info"></i>About App</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
-                    <div class="profile-menu-item" onclick="showToast('Privacy Policy (Coming Soon)')">
+                    <div class="profile-menu-item" onclick="openInfoModal('Privacy Policy', 'Your privacy is important to us.\n\n1. All user sessions are securely authenticated by Google.\n2. Data is secured by Firebase infrastructure.\n3. We do not sell your personal data.\n4. AI Chat logs are stored strictly for providing you with chat history features.')">
                         <div class="menu-left"><i class="fa-solid fa-shield-halved"></i>Privacy Policy</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
-                    <div class="profile-menu-item" onclick="showToast('Terms of Service (Coming Soon)')">
+                    <div class="profile-menu-item" onclick="openInfoModal('Terms of Service', 'By using Garo AI, you agree to the following terms:\n\n1. The AI may sometimes generate inaccurate translations. Please use outputs as a helpful reference.\n2. Do not attempt to bypass security limits.\n3. Any abuse of the API or system will result in an account ban.')">
                         <div class="menu-left"><i class="fa-solid fa-file-contract"></i>Terms of Service</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    <div class="profile-menu-item" onclick="openInfoModal('FAQ & Support', 'Q: How do I upgrade my account?\nA: Navigate to the Membership tab (Crown Icon), click upgrade, and submit your UTR.\n\nQ: Who built Garo AI?\nA: It was created by Mr Bush X.')">
+                        <div class="menu-left"><i class="fa-solid fa-circle-question"></i>FAQ</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
                     <div class="profile-menu-item menu-danger" id="btnProfileLogout">
@@ -375,11 +406,12 @@
             </div>
         </div>
 
-        <!-- OVERLAY BOTTOM NAVIGATION PILL -->
+        <!-- OVERLAY BOTTOM NAVIGATION PILL WITH MEMBERSHIP TAB -->
         <div class="bottom-overlay-container" id="bottomOverlay">
             <div class="bottom-nav">
                 <div class="nav-item active" id="navTranslate"><i class="fa-solid fa-language"></i><span>Translate</span></div>
                 <div class="nav-item" id="navChat"><i class="fa-solid fa-robot"></i><span>AI Chat</span></div>
+                <div class="nav-item" id="navMembership"><i class="fa-solid fa-crown"></i><span>Premium</span></div>
                 <div class="nav-item" id="navProfile"><i class="fa-solid fa-user"></i><span>Profile</span></div>
             </div>
         </div>
@@ -397,6 +429,17 @@
         </div>
     </div>
 
+    <!-- Generic Information Modal -->
+    <div class="modal-overlay" id="infoModal">
+        <div class="modal-card">
+            <h2 id="infoModalTitle">Title</h2>
+            <div class="info-content" id="infoModalContent">Content</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnCloseInfoModal">Close</button>
+            </div>
+        </div>
+    </div>
+
     <!-- App Update Modal -->
     <div class="modal-overlay" id="updateModal">
         <div class="modal-card">
@@ -409,11 +452,11 @@
         </div>
     </div>
 
-    <!-- Premium Modal -->
+    <!-- Premium Upgrade / Payment Modal -->
     <div class="modal-overlay" id="premiumModal">
         <div class="modal-card">
             <h2>Premium Upgrade Required</h2>
-            <p id="premiumMsg">You have reached your daily free limit. To continue using Garo AI without limits, please scan the QR code below to pay.</p>
+            <p id="premiumMsg">Scan the QR code below to pay. Remove daily free limits and get unrestricted access.</p>
             <img id="qrImage" class="qr-img" src="" alt="QR Code" style="display: none;">
             
             <input type="text" id="utrInput" placeholder="Enter 12-digit UTR Number">
@@ -490,13 +533,16 @@
 
     const headerTitle = document.getElementById("headerTitle");
     const btnNewChat = document.getElementById("btnNewChat");
+    
     const sectionTranslate = document.getElementById("sectionTranslate");
     const sectionChat = document.getElementById("sectionChat");
+    const sectionMembership = document.getElementById("sectionMembership");
     const sectionProfile = document.getElementById("sectionProfile");
     
     const bottomOverlay = document.getElementById("bottomOverlay");
     const navTranslate = document.getElementById("navTranslate");
     const navChat = document.getElementById("navChat");
+    const navMembership = document.getElementById("navMembership");
     const navProfile = document.getElementById("navProfile");
 
     const sourceLangSelect = document.getElementById("sourceLang");
@@ -519,6 +565,7 @@
     const btnCloseHistory = document.getElementById("btnCloseHistory");
     const historyListContainer = document.getElementById("historyListContainer");
 
+    // Modal DOM
     const premiumModal = document.getElementById("premiumModal");
     const btnCloseModal = document.getElementById("btnCloseModal");
     const btnSubmitUtr = document.getElementById("btnSubmitUtr");
@@ -526,10 +573,16 @@
     const qrImage = document.getElementById("qrImage");
     const proofInput = document.getElementById("proofInput");
     const previewProof = document.getElementById("previewProof");
+    const btnMembershipUpgrade = document.getElementById("btnMembershipUpgrade");
 
     const updateModal = document.getElementById("updateModal");
     const btnLaterUpdate = document.getElementById("btnLaterUpdate");
     const btnNowUpdate = document.getElementById("btnNowUpdate");
+
+    const infoModal = document.getElementById("infoModal");
+    const infoModalTitle = document.getElementById("infoModalTitle");
+    const infoModalContent = document.getElementById("infoModalContent");
+    const btnCloseInfoModal = document.getElementById("btnCloseInfoModal");
 
     // Profile DOM
     const profileName = document.getElementById("profileName");
@@ -538,6 +591,30 @@
     const profileEmailEye = document.getElementById("profileEmailEye");
     const profileAvatar = document.getElementById("profileAvatar");
     const btnProfileLogout = document.getElementById("btnProfileLogout");
+
+    // Make openInfoModal globally accessible for onclick attributes
+    window.openInfoModal = function(title, content) {
+        infoModalTitle.innerText = title;
+        infoModalContent.innerText = content;
+        infoModal.style.display = "flex";
+    };
+
+    btnCloseInfoModal.onclick = () => { infoModal.style.display = "none"; };
+
+    // Membership direct upgrade
+    btnMembershipUpgrade.onclick = () => { premiumModal.style.display = "flex"; };
+
+    // --- VIEWPORT / KEYBOARD SIZING LOGIC ---
+    function adjustForKeyboard() {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        if (currentTab === 'chat' && document.activeElement === inputChat) {
+            setTimeout(() => { chatScroll.scrollTop = chatScroll.scrollHeight; }, 100);
+        }
+    }
+    if (window.visualViewport) { window.visualViewport.addEventListener("resize", adjustForKeyboard); }
+    window.addEventListener("resize", adjustForKeyboard);
+    adjustForKeyboard();
 
     // --- AUTHENTICATION STATE OBSERVER ---
     onAuthStateChanged(auth, (user) => {
@@ -630,42 +707,31 @@
 
     // --- SMART SCROLL LOGIC FOR DYNAMIC NAV/INPUT ---
     let lastScrollYChat = 0;
-    let lastScrollYTranslate = 0;
-    let lastScrollYProfile = 0;
 
     function toggleNavVisibility(hideNav) {
-        if (hideNav) {
-            bottomOverlay.classList.add("nav-hidden");
-        } else {
-            bottomOverlay.classList.remove("nav-hidden");
-        }
+        if (hideNav) { bottomOverlay.classList.add("nav-hidden"); } 
+        else { bottomOverlay.classList.remove("nav-hidden"); }
     }
 
     function toggleChatInputVisibility(showInput) {
-        if (showInput) {
-            chatInputContainer.classList.remove("input-hidden");
-        } else {
-            chatInputContainer.classList.add("input-hidden");
-        }
+        if (showInput) { chatInputContainer.classList.remove("input-hidden"); } 
+        else { chatInputContainer.classList.add("input-hidden"); }
     }
 
-    // Scroll Logic for Translate Section
-    sectionTranslate.addEventListener("scroll", (e) => {
-        if (currentTab !== "translate") return;
-        const currentY = e.target.scrollTop;
-        if (currentY > lastScrollYTranslate && currentY > 20) { toggleNavVisibility(true); } 
-        else if (currentY < lastScrollYTranslate) { toggleNavVisibility(false); }
-        lastScrollYTranslate = currentY;
-    });
+    function attachStandardNavScrollLogic(sectionEl) {
+        let lastY = 0;
+        sectionEl.addEventListener("scroll", (e) => {
+            if (currentTab !== sectionEl.id.replace("section", "").toLowerCase()) return;
+            const currentY = e.target.scrollTop;
+            if (currentY > lastY && currentY > 20) { toggleNavVisibility(true); } 
+            else if (currentY < lastY) { toggleNavVisibility(false); }
+            lastY = currentY;
+        });
+    }
 
-    // Scroll Logic for Profile Section
-    sectionProfile.addEventListener("scroll", (e) => {
-        if (currentTab !== "profile") return;
-        const currentY = e.target.scrollTop;
-        if (currentY > lastScrollYProfile && currentY > 20) { toggleNavVisibility(true); } 
-        else if (currentY < lastScrollYProfile) { toggleNavVisibility(false); }
-        lastScrollYProfile = currentY;
-    });
+    attachStandardNavScrollLogic(sectionTranslate);
+    attachStandardNavScrollLogic(sectionProfile);
+    attachStandardNavScrollLogic(sectionMembership);
 
     // Smart Scroll Logic specifically for AI Chat
     chatScroll.addEventListener("scroll", (e) => {
@@ -691,17 +757,15 @@
         lastScrollYChat = currentY;
     });
 
-    // Fix: Ensures input forces view to bottom without layout breaking when keyboard shows natively
     inputChat.addEventListener("focus", () => {
         toggleNavVisibility(true);
-        setTimeout(() => {
-            chatScroll.scrollTop = chatScroll.scrollHeight;
-        }, 150); // Small delay allows native mobile keyboard expansion
+        setTimeout(() => { chatScroll.scrollTop = chatScroll.scrollHeight; }, 150);
     });
 
     // --- UI NAVIGATION LOGIC ---
     navTranslate.onclick = () => switchTab("translate");
     navChat.onclick = () => switchTab("chat");
+    navMembership.onclick = () => switchTab("membership");
     navProfile.onclick = () => switchTab("profile");
 
     function switchTab(tabName) {
@@ -709,20 +773,24 @@
         
         sectionTranslate.style.display = (tabName === "translate") ? "flex" : "none";
         sectionChat.style.display = (tabName === "chat") ? "flex" : "none";
+        sectionMembership.style.display = (tabName === "membership") ? "flex" : "none";
         sectionProfile.style.display = (tabName === "profile") ? "flex" : "none";
         
         navTranslate.classList.toggle("active", tabName === "translate");
         navChat.classList.toggle("active", tabName === "chat");
+        navMembership.classList.toggle("active", tabName === "membership");
         navProfile.classList.toggle("active", tabName === "profile");
         
         btnNewChat.style.display = (tabName === "chat") ? "block" : "none";
 
-        if (tabName === "translate" || tabName === "profile") {
+        if (tabName !== "chat") {
             toggleNavVisibility(false); 
             toggleChatInputVisibility(false); 
         }
 
         if (tabName === "translate") headerTitle.innerText = "Translate";
+        if (tabName === "membership") headerTitle.innerText = "Pro Plan";
+        if (tabName === "profile") headerTitle.innerText = "My Profile";
         
         if (tabName === "chat") {
             headerTitle.innerText = "AI Chat";
@@ -731,8 +799,7 @@
             setTimeout(()=> { chatScroll.scrollTop = chatScroll.scrollHeight; }, 50);
         }
         
-        if (tabName === "profile") {
-            headerTitle.innerText = "My Profile";
+        if (tabName === "profile" || tabName === "membership") {
             updateUsageUI();
         }
     }
@@ -748,7 +815,6 @@
         element.innerText = "";
         element.classList.add("typing-cursor"); 
         let i = 0;
-        
         function type() {
             if (i < text.length) {
                 element.innerText += text.charAt(i);
@@ -788,8 +854,14 @@
         
         if (isPremium) {
             profileBadge.innerText = "Premium"; profileBadge.className = "badge premium";
+            btnMembershipUpgrade.innerText = "You are Premium ✅";
+            btnMembershipUpgrade.disabled = true;
+            btnMembershipUpgrade.style.background = "#10B981";
+            btnMembershipUpgrade.style.boxShadow = "none";
         } else {
             profileBadge.innerText = "Free Plan"; profileBadge.className = "badge free";
+            btnMembershipUpgrade.innerText = "Upgrade to Premium";
+            btnMembershipUpgrade.disabled = false;
         }
     }
 
@@ -921,8 +993,7 @@
 
     btnCloseModal.onclick = () => { premiumModal.style.display = "none"; };
 
-    // --- IMAGE COMPRESSION & UPLOAD ---
-// --- IMAGE COMPRESSION & UPLOAD (Target: 20 KB) ---
+    // --- ULTRA OPTIMIZED 20KB IMAGE COMPRESSION ---
     function compressImageTo20KB(file, callback) {
         const reader = new FileReader();
         reader.onload = function(e) {
@@ -948,7 +1019,6 @@
                 while (dataUrl.length > 27500 && iterations < 6) {
                     quality -= 0.1;
                     if (quality < 0.1) {
-                        // If quality drops too low, shrink the image dimensions instead
                         width *= 0.8; 
                         height *= 0.8;
                         canvas.width = width; 
@@ -1132,7 +1202,6 @@
     inputChat.addEventListener("keypress", (e) => { 
         if (e.key === "Enter") { e.preventDefault(); btnSendChat.click(); } 
     });
-
 
     // --- CHAT HISTORY UI LOGIC ---
     function formatHistoryDate(ms) {
