@@ -111,26 +111,38 @@
         /* Specific AI Chat Disclaimer */
         .chat-disclaimer { font-size: 11px; color: #8D99AE; margin-top: 6px; margin-left: 6px; }
 
-        /* Absolute positioning for dynamic hiding/showing */
+        /* Absolute Floating Input Box */
         .chat-input-container { 
             position: absolute;
-            bottom: 0; left: 0; right: 0;
+            bottom: calc(20px + env(safe-area-inset-bottom));
+            left: 20px; 
+            right: 20px;
             background-color: rgba(255, 255, 255, 0.95); 
-            backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px);
-            padding: 12px 16px calc(12px + env(safe-area-inset-bottom)) 16px; 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 6px 6px 6px 16px; 
             display: flex; align-items: center; gap: 10px; 
-            box-shadow: 0 -4px 20px rgba(0,0,0,0.05); 
-            transition: transform 0.3s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.3s ease;
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.8);
+            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
             z-index: 15; /* Sits under the overlay nav if both ever open, but they alternate */
         }
         
         .chat-input-container.input-hidden {
-            transform: translateY(120%);
+            transform: translateY(150%);
             opacity: 0;
             pointer-events: none;
         }
 
-        .chat-input-container input { flex: 1; border: 1px solid #E2E8F0; border-radius: 20px; padding: 12px 16px; font-size: 15px; outline: none; background: var(--white);}
+        .chat-input-container input { 
+            flex: 1; 
+            border: none; 
+            padding: 10px 0; 
+            font-size: 15px; 
+            outline: none; 
+            background: transparent;
+            color: var(--text-dark);
+        }
         .btn-send { background-color: var(--primary); color: var(--white); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0;}
         .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
@@ -181,7 +193,7 @@
             right: 20px;
             z-index: 20;
             pointer-events: none; /* Let clicks pass through empty areas */
-            transition: opacity 0.3s cubic-bezier(0.25, 1, 0.5, 1), transform 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+            transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
         }
         
         .bottom-overlay-container.nav-hidden {
@@ -293,6 +305,7 @@
             <!-- AI Chat Tab -->
             <div id="sectionChat">
                 <div class="chat-scroll" id="chatScroll"></div>
+                <!-- Floating Input Box -->
                 <div class="chat-input-container input-hidden" id="chatInputContainer">
                     <input type="text" id="inputChat" placeholder="Type a message...">
                     <button class="btn-send" id="btnSendChat"><i class="fa-solid fa-paper-plane"></i></button>
@@ -612,18 +625,23 @@
         const currentY = e.target.scrollTop;
         const maxScroll = e.target.scrollHeight - e.target.clientHeight;
         
-        if (currentY > lastScrollYChat && currentY > 20) { 
-            // Scroll DOWN (going to newest messages) -> Hide Nav, Show Input Box
+        // Prevent trigger glitches near scroll edges
+        if (currentY <= 0 || currentY >= maxScroll) {
+            lastScrollYChat = currentY;
+        }
+        
+        if (currentY > lastScrollYChat + 5) { 
+            // Scroll DOWN (going to newest messages) -> Hide Nav, Show Input Box immediately
             toggleNavVisibility(true); 
             toggleChatInputVisibility(true);
-        } else if (currentY < lastScrollYChat) { 
-            // Scroll UP (reading past messages) -> Show Nav, Hide Input Box
+        } else if (currentY < lastScrollYChat - 5) { 
+            // Scroll UP (reading past messages) -> Show Nav, Hide Input Box immediately
             toggleNavVisibility(false); 
             toggleChatInputVisibility(false);
         }
         
         // Force show Input if scrolled to absolute bottom
-        if (currentY >= maxScroll - 5) {
+        if (currentY >= maxScroll - 10) {
             toggleNavVisibility(true);
             toggleChatInputVisibility(true);
         }
@@ -656,7 +674,7 @@
         
         if (tabName === "chat") {
             headerTitle.innerText = "AI Chat";
-            // Instantly hide Nav and show Text Box when entering chat
+            // Instantly hide Nav and show Text Box immediately when clicking AI Chat tab
             toggleNavVisibility(true); 
             toggleChatInputVisibility(true);
             setTimeout(()=> { chatScroll.scrollTop = chatScroll.scrollHeight; }, 50);
