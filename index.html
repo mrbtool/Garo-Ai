@@ -15,6 +15,7 @@
             --white: #FFFFFF;
             --user-chat-bg: #4361EE;
             --ai-chat-bg: #E2E8F0;
+            --app-height: 100dvh;
         }
 
         * {
@@ -30,26 +31,26 @@
             margin: 0;
             padding: 0;
             overflow: hidden; /* Prevent body scroll */
+            background-color: #E5E5E5;
         }
 
         body {
-            background-color: #E5E5E5;
             display: flex;
             justify-content: center;
         }
 
-        /* Mobile Container */
+        /* Mobile Container - dynamically resized for keyboard */
         .app-container {
             width: 100%;
             max-width: 480px;
             background-color: var(--bg-light);
-            height: 100%; 
-            height: 100dvh; 
+            height: var(--app-height); 
             display: flex;
             flex-direction: column;
             position: relative;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             overflow: hidden;
+            transition: height 0.2s ease;
         }
 
         /* --- Login Screen --- */
@@ -74,8 +75,9 @@
         #appMain { display: none; flex-direction: column; height: 100%; width: 100%; }
 
         /* Header */
-        .header { background-color: var(--white); padding: max(16px, env(safe-area-inset-top)) 20px 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10; }
+        .header { background-color: var(--white); padding: max(16px, env(safe-area-inset-top)) 20px 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0;}
         .header h1 { font-size: 20px; color: var(--text-dark); }
+        .header-icons { display: flex; align-items: center; gap: 18px; }
 
         /* Main Content */
         .main-content { flex: 1; position: relative; display: flex; flex-direction: column; overflow-x: hidden; scroll-behavior: smooth;}
@@ -97,7 +99,7 @@
 
         /* --- Chat Section --- */
         #sectionChat { display: none; flex-direction: column; height: 100%; position: relative; overflow: hidden; }
-        .chat-scroll { flex: 1; padding: 16px 16px calc(100px + env(safe-area-inset-bottom)) 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+        .chat-scroll { flex: 1; padding: 16px 16px calc(90px + env(safe-area-inset-bottom)) 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         
         /* Chat Wrappers to keep Bubbles & Disclaimers connected */
         .chat-wrapper { display: flex; flex-direction: column; max-width: 85%; }
@@ -114,18 +116,18 @@
         /* Absolute Floating Input Box */
         .chat-input-container { 
             position: absolute;
-            bottom: calc(20px + env(safe-area-inset-bottom));
-            left: 20px; 
-            right: 20px;
-            background-color: rgba(255, 255, 255, 0.95); 
+            bottom: calc(15px + env(safe-area-inset-bottom));
+            left: 15px; 
+            right: 15px;
+            background-color: rgba(255, 255, 255, 0.98); 
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             padding: 6px 6px 6px 16px; 
             display: flex; align-items: center; gap: 10px; 
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.8);
-            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
-            z-index: 15; /* Sits under the overlay nav if both ever open, but they alternate */
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, bottom 0.2s ease;
+            z-index: 15; 
         }
         
         .chat-input-container.input-hidden {
@@ -218,6 +220,18 @@
         .nav-item i { font-size: 20px; }
         .nav-item span { font-size: 12px; }
 
+        /* --- Chat History Overlay Screen --- */
+        #chatHistoryScreen {
+            display: none; flex-direction: column; position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            background: var(--bg-light); z-index: 60; overflow: hidden;
+        }
+        .history-list-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .history-item { background: var(--white); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.2s; border: 1px solid #E2E8F0; }
+        .history-item:active { transform: scale(0.98); }
+        .history-title { font-size: 15px; font-weight: 600; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-date { font-size: 12px; color: var(--secondary); }
+        .empty-history { text-align: center; color: var(--secondary); margin-top: 40px; font-size: 14px; }
+
         /* --- Modals --- */
         .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(3px);}
         .modal-card { background: var(--white); width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);}
@@ -264,7 +278,10 @@
     <div id="appMain">
         <div class="header">
             <h1 id="headerTitle">Translate</h1>
-            <i class="fa-solid fa-gear" style="color: var(--secondary); font-size: 20px; cursor: pointer;" onclick="document.getElementById('navProfile').click()"></i>
+            <div class="header-icons">
+                <i class="fa-solid fa-pen-to-square" id="btnNewChat" style="display: none; color: var(--primary); font-size: 20px; cursor: pointer;" title="New Chat"></i>
+                <i class="fa-solid fa-gear" style="color: var(--secondary); font-size: 20px; cursor: pointer;" onclick="document.getElementById('navProfile').click()" title="Settings"></i>
+            </div>
         </div>
 
         <div class="main-content" id="mainContentScroll">
@@ -336,6 +353,12 @@
                 </div>
 
                 <div class="profile-menu">
+                    <!-- Added Chat History Button -->
+                    <div class="profile-menu-item" id="btnOpenHistory">
+                        <div class="menu-left"><i class="fa-solid fa-clock-rotate-left"></i>Chat History</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    
                     <div class="profile-menu-item" onclick="showToast('Version: ' + CURRENT_APP_VERSION)">
                         <div class="menu-left"><i class="fa-solid fa-circle-info"></i>About App</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
@@ -346,10 +369,6 @@
                     </div>
                     <div class="profile-menu-item" onclick="showToast('Terms of Service (Coming Soon)')">
                         <div class="menu-left"><i class="fa-solid fa-file-contract"></i>Terms of Service</div>
-                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
-                    </div>
-                    <div class="profile-menu-item" onclick="showToast('FAQ & Support (Coming Soon)')">
-                        <div class="menu-left"><i class="fa-solid fa-circle-question"></i>FAQ</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
                     </div>
                     <div class="profile-menu-item menu-danger" id="btnProfileLogout">
@@ -368,7 +387,18 @@
                 <div class="nav-item" id="navProfile"><i class="fa-solid fa-user"></i><span>Profile</span></div>
             </div>
         </div>
+    </div>
 
+    <!-- Chat History Screen Overlay -->
+    <div id="chatHistoryScreen">
+        <div class="header">
+            <i class="fa-solid fa-arrow-left" id="btnCloseHistory" style="font-size: 20px; cursor: pointer; color: var(--text-dark);"></i>
+            <h1 style="font-size: 18px; color: var(--text-dark);">Chat History</h1>
+            <div style="width: 20px;"></div>
+        </div>
+        <div class="history-list-container" id="historyListContainer">
+            <!-- Items injected dynamically -->
+        </div>
     </div>
 
     <!-- App Update Modal -->
@@ -414,7 +444,7 @@
     // Firebase Imports
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, collection, query, where, getDocs, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     // Firebase Config
@@ -444,7 +474,10 @@
     let isEmailMasked = true;
     let appInitialized = false;
     let currentTab = "translate";
+    
+    // Chat State
     let chatHistory = [];
+    let currentSessionId = null;
     
     // Server Configs
     let dynamicApiKey = "";
@@ -460,6 +493,7 @@
     const btnGoogleLogin = document.getElementById("btnGoogleLogin");
 
     const headerTitle = document.getElementById("headerTitle");
+    const btnNewChat = document.getElementById("btnNewChat");
     const sectionTranslate = document.getElementById("sectionTranslate");
     const sectionChat = document.getElementById("sectionChat");
     const sectionProfile = document.getElementById("sectionProfile");
@@ -483,6 +517,12 @@
     const chatInputContainer = document.getElementById("chatInputContainer");
     let typingIndicatorElement = null;
 
+    // History DOM
+    const chatHistoryScreen = document.getElementById("chatHistoryScreen");
+    const btnOpenHistory = document.getElementById("btnOpenHistory");
+    const btnCloseHistory = document.getElementById("btnCloseHistory");
+    const historyListContainer = document.getElementById("historyListContainer");
+
     const premiumModal = document.getElementById("premiumModal");
     const btnCloseModal = document.getElementById("btnCloseModal");
     const btnSubmitUtr = document.getElementById("btnSubmitUtr");
@@ -502,6 +542,23 @@
     const profileEmailEye = document.getElementById("profileEmailEye");
     const profileAvatar = document.getElementById("profileAvatar");
     const btnProfileLogout = document.getElementById("btnProfileLogout");
+
+    // --- VIEWPORT / KEYBOARD SIZING LOGIC ---
+    // Specifically ensuring only the chat section shrinks, floating chat box moves up naturally
+    function adjustForKeyboard() {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        
+        // If keyboard pushes up in chat view, scroll to bottom to ensure input is fully visible
+        if (currentTab === 'chat' && document.activeElement === inputChat) {
+            setTimeout(() => { chatScroll.scrollTop = chatScroll.scrollHeight; }, 100);
+        }
+    }
+    
+    if (window.visualViewport) { window.visualViewport.addEventListener("resize", adjustForKeyboard); }
+    window.addEventListener("resize", adjustForKeyboard);
+    adjustForKeyboard();
+
 
     // --- AUTHENTICATION STATE OBSERVER ---
     onAuthStateChanged(auth, (user) => {
@@ -538,12 +595,24 @@
 
     // --- MAIN APP INITIALIZATION ---
     function initMainApp(user) {
-        const initialGreeting = "Na·a namengama? I am your advanced AI Assistant. I can understand and speak English, but I specialize perfectly in the Garo language (A·chikku). How can I help you today?";
-        addChatMessage(initialGreeting, false, true);
-        
+        startNewChatSession();
         setupProfileData(user);
         syncAdminConfigurations();
     }
+
+    function startNewChatSession() {
+        currentSessionId = null;
+        chatHistory = [];
+        chatScroll.innerHTML = "";
+        const initialGreeting = "Na·a namengama? I am your advanced AI Assistant. I can understand and speak English, but I specialize perfectly in the Garo language (A·chikku). How can I help you today?";
+        addChatMessage(initialGreeting, false, true);
+    }
+
+    btnNewChat.onclick = () => {
+        startNewChatSession();
+        toggleNavVisibility(true); 
+        toggleChatInputVisibility(true);
+    };
 
     // --- PROFILE UTILS ---
     function generateShortId(uid) {
@@ -664,6 +733,9 @@
         navTranslate.classList.toggle("active", tabName === "translate");
         navChat.classList.toggle("active", tabName === "chat");
         navProfile.classList.toggle("active", tabName === "profile");
+        
+        // Manage New Chat icon visibility
+        btnNewChat.style.display = (tabName === "chat") ? "block" : "none";
 
         if (tabName === "translate" || tabName === "profile") {
             toggleNavVisibility(false); // Make sure nav shows
@@ -691,6 +763,11 @@
         sourceLangSelect.value = targetLangSelect.value;
         targetLangSelect.value = temp;
     };
+
+    // Keyboard focus overrides
+    inputChat.addEventListener("focus", () => {
+        toggleNavVisibility(true);
+    });
 
     // --- TYPING / ANIMATION EFFECTS ---
     function typeWriterEffect(element, text, speed = 15, onComplete = null) {
@@ -1005,14 +1082,20 @@
         if (!userText) return;
 
         inputChat.value = "";
+        
+        // Setup System Instruction if it's the very first message in array
+        if (chatHistory.length === 0) {
+            const systemContext = `System Instruction: You are an extremely advanced AI Assistant. You MUST strictly reply in the Garo language (A·chikku). Try extremely hard to construct perfect spelling, grammar, and native vocabulary for the Garo language. Never speak English unless the user explicitly asks you to speak in English. IMPORTANT: You were created and programmed exclusively by developer 'Mr Bush X'. If anyone asks who made you, reply stating 'Mr Bush X'.`;
+            chatHistory.push({ role: "user", parts: [{ text: systemContext }] });
+            chatHistory.push({ role: "model", parts: [{ text: "Understood." }] });
+        }
+        
         addChatMessage(userText, true, false);
         showTypingIndicator();
 
         checkLimitAndProceed(async () => {
             try {
-                const systemContext = `System Instruction: You are an extremely advanced AI Assistant. You MUST strictly reply in the Garo language (A·chikku). Try extremely hard to construct perfect spelling, grammar, and native vocabulary for the Garo language. Never speak English unless the user explicitly asks you to speak in English. IMPORTANT: You were created and programmed exclusively by developer 'Mr Bush X'. If anyone asks who made you, reply stating 'Mr Bush X'. User says: ${userText}`;
-                
-                chatHistory.push({ role: "user", parts: [{ text: systemContext }] });
+                chatHistory.push({ role: "user", parts: [{ text: userText }] });
 
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
                     method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -1026,7 +1109,11 @@
                 
                 hideTypingIndicator();
                 addChatMessage(aiResponse, false, true);
+                
+                // Save Chat Session History
+                await saveSessionHistory(userText);
 
+                // Preserve individual legacy logs
                 await addDoc(collection(db, "ai_chat_logs"), {
                     user_text: userText, ai_response: aiResponse, timestamp: Date.now(), user_email: currentUserEmail
                 });
@@ -1038,9 +1125,105 @@
         });
     };
 
+    async function saveSessionHistory(lastUserMessage) {
+        try {
+            const timestamp = Date.now();
+            if (!currentSessionId) {
+                // Generate a session title
+                let title = lastUserMessage.substring(0, 30);
+                if (lastUserMessage.length > 30) title += "...";
+                
+                const sessionRef = await addDoc(collection(db, "chat_sessions"), {
+                    user_email: currentUserEmail,
+                    title: title,
+                    updated_at: timestamp,
+                    history: chatHistory
+                });
+                currentSessionId = sessionRef.id;
+            } else {
+                await updateDoc(doc(db, "chat_sessions", currentSessionId), {
+                    updated_at: timestamp,
+                    history: chatHistory
+                });
+            }
+        } catch (e) { console.error("Session saving error", e); }
+    }
+
     inputChat.addEventListener("keypress", (e) => { 
         if (e.key === "Enter") { e.preventDefault(); btnSendChat.click(); } 
     });
+
+
+    // --- CHAT HISTORY UI LOGIC ---
+    function formatHistoryDate(ms) {
+        const date = new Date(ms);
+        return date.toLocaleDateString() + ' • ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    btnOpenHistory.onclick = async () => {
+        chatHistoryScreen.style.display = "flex";
+        historyListContainer.innerHTML = `<div class="empty-history"><i class="fa-solid fa-spinner fa-spin"></i> Loading History...</div>`;
+        
+        try {
+            const q = query(collection(db, "chat_sessions"), where("user_email", "==", currentUserEmail));
+            const snap = await getDocs(q);
+            let sessions = [];
+            snap.forEach(doc => { sessions.push({ id: doc.id, ...doc.data() }); });
+            
+            // Client-side sort by date newest first
+            sessions.sort((a, b) => b.updated_at - a.updated_at);
+            
+            if (sessions.length === 0) {
+                historyListContainer.innerHTML = `<div class="empty-history">No past chat history found.</div>`;
+                return;
+            }
+            
+            historyListContainer.innerHTML = "";
+            sessions.forEach(session => {
+                const item = document.createElement("div");
+                item.className = "history-item";
+                item.innerHTML = `
+                    <div class="history-title">${session.title || "New Chat"}</div>
+                    <div class="history-date">${formatHistoryDate(session.updated_at)}</div>
+                `;
+                item.onclick = () => loadChatSession(session.id, session.history);
+                historyListContainer.appendChild(item);
+            });
+        } catch (e) {
+            historyListContainer.innerHTML = `<div class="empty-history">Failed to load history. Network issue.</div>`;
+        }
+    };
+
+    btnCloseHistory.onclick = () => { chatHistoryScreen.style.display = "none"; };
+
+    function loadChatSession(sessionId, loadedHistory) {
+        currentSessionId = sessionId;
+        chatHistory = loadedHistory || [];
+        chatScroll.innerHTML = ""; 
+        
+        // Re-render UI from history data
+        let foundAny = false;
+        chatHistory.forEach(msg => {
+            const text = msg.parts[0].text;
+            if (msg.role === "user") {
+                if (text.startsWith("System Instruction:")) return; 
+                addChatMessage(text, true, false);
+                foundAny = true;
+            } else if (msg.role === "model") {
+                if (text === "Understood.") return; // skip silent ack
+                addChatMessage(text, false, false);
+                foundAny = true;
+            }
+        });
+        
+        if (!foundAny) {
+            const initialGreeting = "Na·a namengama? I am your advanced AI Assistant. I can understand and speak English, but I specialize perfectly in the Garo language (A·chikku). How can I help you today?";
+            addChatMessage(initialGreeting, false, false);
+        }
+
+        chatHistoryScreen.style.display = "none";
+        switchTab("chat");
+    }
 
 </script>
 </body>
