@@ -2,7 +2,8 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <!-- Using interactive-widget=resizes-content to natively handle keyboard resizing without layout breaking -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
     <title>Garo AI</title>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -15,7 +16,6 @@
             --white: #FFFFFF;
             --user-chat-bg: #4361EE;
             --ai-chat-bg: #E2E8F0;
-            --app-height: 100dvh;
         }
 
         * {
@@ -30,7 +30,7 @@
             width: 100%;
             margin: 0;
             padding: 0;
-            overflow: hidden; /* Prevent body scroll */
+            overflow: hidden; /* Prevent native body pan */
             background-color: #E5E5E5;
         }
 
@@ -39,18 +39,18 @@
             justify-content: center;
         }
 
-        /* Mobile Container - dynamically resized for keyboard */
+        /* Mobile Container - Height adapts cleanly via 100dvh now */
         .app-container {
             width: 100%;
             max-width: 480px;
             background-color: var(--bg-light);
-            height: var(--app-height); 
+            height: 100%; 
+            height: 100dvh; 
             display: flex;
             flex-direction: column;
             position: relative;
             box-shadow: 0 0 20px rgba(0,0,0,0.1);
             overflow: hidden;
-            transition: height 0.2s ease;
         }
 
         /* --- Login Screen --- */
@@ -94,14 +94,12 @@
         .btn-translate:disabled { opacity: 0.5; cursor: not-allowed; }
         .output-text { color: var(--text-dark); font-size: 16px; min-height: 100px; white-space: pre-wrap; }
         
-        /* Specific Translate Disclaimer */
         .static-disclaimer { font-size: 12px; text-align: center; color: #8D99AE; margin-top: -5px; }
 
         /* --- Chat Section --- */
         #sectionChat { display: none; flex-direction: column; height: 100%; position: relative; overflow: hidden; }
         .chat-scroll { flex: 1; padding: 16px 16px calc(90px + env(safe-area-inset-bottom)) 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
         
-        /* Chat Wrappers to keep Bubbles & Disclaimers connected */
         .chat-wrapper { display: flex; flex-direction: column; max-width: 85%; }
         .chat-wrapper.user { align-self: flex-end; align-items: flex-end; }
         .chat-wrapper.ai { align-self: flex-start; align-items: flex-start; }
@@ -110,7 +108,6 @@
         .chat-ai { background-color: var(--ai-chat-bg); color: var(--text-dark); border-bottom-left-radius: 4px; }
         .chat-user { background-color: var(--user-chat-bg); color: var(--white); border-bottom-right-radius: 4px; }
         
-        /* Specific AI Chat Disclaimer */
         .chat-disclaimer { font-size: 11px; color: #8D99AE; margin-top: 6px; margin-left: 6px; }
 
         /* Absolute Floating Input Box */
@@ -126,7 +123,7 @@
             box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             border-radius: 30px;
             border: 1px solid rgba(226, 232, 240, 0.8);
-            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, bottom 0.2s ease;
+            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease;
             z-index: 15; 
         }
         
@@ -148,7 +145,7 @@
         .btn-send { background-color: var(--primary); color: var(--white); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0;}
         .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        /* Typing Indicator Animation */
+        /* Typing Indicator */
         .typing-indicator { display: flex; gap: 4px; padding: 12px 16px; background-color: var(--ai-chat-bg); border-radius: 16px; border-bottom-left-radius: 4px; width: fit-content; align-items: center;}
         .typing-dot { width: 6px; height: 6px; background: var(--secondary); border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
         .typing-dot:nth-child(1) { animation-delay: -0.32s; }
@@ -194,7 +191,7 @@
             left: 20px; 
             right: 20px;
             z-index: 20;
-            pointer-events: none; /* Let clicks pass through empty areas */
+            pointer-events: none;
             transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
         }
         
@@ -209,7 +206,7 @@
             backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
             display: flex; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
             border-radius: 30px; 
-            pointer-events: auto; /* Re-enable clicks */
+            pointer-events: auto;
             border: 1px solid rgba(255,255,255,0.8);
             padding: 4px 10px;
             width: 100%;
@@ -315,7 +312,6 @@
                 <button class="btn-translate" id="btnTranslate">Translate</button>
                 <div class="output-card"><div class="output-text" id="outputText">Translation will appear here...</div></div>
                 
-                <!-- Explicit Translation Disclaimer -->
                 <div class="static-disclaimer">Sorry, Garo AI may make mistakes, it will improve later 🙂</div>
             </div>
 
@@ -353,7 +349,7 @@
                 </div>
 
                 <div class="profile-menu">
-                    <!-- Added Chat History Button -->
+                    <!-- Chat History Button -->
                     <div class="profile-menu-item" id="btnOpenHistory">
                         <div class="menu-left"><i class="fa-solid fa-clock-rotate-left"></i>Chat History</div>
                         <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
@@ -543,23 +539,6 @@
     const profileAvatar = document.getElementById("profileAvatar");
     const btnProfileLogout = document.getElementById("btnProfileLogout");
 
-    // --- VIEWPORT / KEYBOARD SIZING LOGIC ---
-    // Specifically ensuring only the chat section shrinks, floating chat box moves up naturally
-    function adjustForKeyboard() {
-        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
-        document.documentElement.style.setProperty('--app-height', `${vh}px`);
-        
-        // If keyboard pushes up in chat view, scroll to bottom to ensure input is fully visible
-        if (currentTab === 'chat' && document.activeElement === inputChat) {
-            setTimeout(() => { chatScroll.scrollTop = chatScroll.scrollHeight; }, 100);
-        }
-    }
-    
-    if (window.visualViewport) { window.visualViewport.addEventListener("resize", adjustForKeyboard); }
-    window.addEventListener("resize", adjustForKeyboard);
-    adjustForKeyboard();
-
-
     // --- AUTHENTICATION STATE OBSERVER ---
     onAuthStateChanged(auth, (user) => {
         if (user) {
@@ -694,28 +673,30 @@
         const currentY = e.target.scrollTop;
         const maxScroll = e.target.scrollHeight - e.target.clientHeight;
         
-        // Prevent trigger glitches near scroll edges
-        if (currentY <= 0 || currentY >= maxScroll) {
-            lastScrollYChat = currentY;
-        }
+        if (currentY <= 0 || currentY >= maxScroll) { lastScrollYChat = currentY; }
         
         if (currentY > lastScrollYChat + 5) { 
-            // Scroll DOWN (going to newest messages) -> Hide Nav, Show Input Box immediately
             toggleNavVisibility(true); 
             toggleChatInputVisibility(true);
         } else if (currentY < lastScrollYChat - 5) { 
-            // Scroll UP (reading past messages) -> Show Nav, Hide Input Box immediately
             toggleNavVisibility(false); 
             toggleChatInputVisibility(false);
         }
         
-        // Force show Input if scrolled to absolute bottom
         if (currentY >= maxScroll - 10) {
             toggleNavVisibility(true);
             toggleChatInputVisibility(true);
         }
 
         lastScrollYChat = currentY;
+    });
+
+    // Fix: Ensures input forces view to bottom without layout breaking when keyboard shows natively
+    inputChat.addEventListener("focus", () => {
+        toggleNavVisibility(true);
+        setTimeout(() => {
+            chatScroll.scrollTop = chatScroll.scrollHeight;
+        }, 150); // Small delay allows native mobile keyboard expansion
     });
 
     // --- UI NAVIGATION LOGIC ---
@@ -734,19 +715,17 @@
         navChat.classList.toggle("active", tabName === "chat");
         navProfile.classList.toggle("active", tabName === "profile");
         
-        // Manage New Chat icon visibility
         btnNewChat.style.display = (tabName === "chat") ? "block" : "none";
 
         if (tabName === "translate" || tabName === "profile") {
-            toggleNavVisibility(false); // Make sure nav shows
-            toggleChatInputVisibility(false); // Hide chat input out of view
+            toggleNavVisibility(false); 
+            toggleChatInputVisibility(false); 
         }
 
         if (tabName === "translate") headerTitle.innerText = "Translate";
         
         if (tabName === "chat") {
             headerTitle.innerText = "AI Chat";
-            // Instantly hide Nav and show Text Box immediately when clicking AI Chat tab
             toggleNavVisibility(true); 
             toggleChatInputVisibility(true);
             setTimeout(()=> { chatScroll.scrollTop = chatScroll.scrollHeight; }, 50);
@@ -763,11 +742,6 @@
         sourceLangSelect.value = targetLangSelect.value;
         targetLangSelect.value = temp;
     };
-
-    // Keyboard focus overrides
-    inputChat.addEventListener("focus", () => {
-        toggleNavVisibility(true);
-    });
 
     // --- TYPING / ANIMATION EFFECTS ---
     function typeWriterEffect(element, text, speed = 15, onComplete = null) {
@@ -887,7 +861,6 @@
         bubble.className = `chat-bubble ${isUser ? 'chat-user' : 'chat-ai'}`;
         wrapper.appendChild(bubble);
         
-        // Add disclaimer strictly under the AI bubble
         if (!isUser) {
             const disclaimer = document.createElement("div");
             disclaimer.className = "chat-disclaimer";
@@ -1083,7 +1056,6 @@
 
         inputChat.value = "";
         
-        // Setup System Instruction if it's the very first message in array
         if (chatHistory.length === 0) {
             const systemContext = `System Instruction: You are an extremely advanced AI Assistant. You MUST strictly reply in the Garo language (A·chikku). Try extremely hard to construct perfect spelling, grammar, and native vocabulary for the Garo language. Never speak English unless the user explicitly asks you to speak in English. IMPORTANT: You were created and programmed exclusively by developer 'Mr Bush X'. If anyone asks who made you, reply stating 'Mr Bush X'.`;
             chatHistory.push({ role: "user", parts: [{ text: systemContext }] });
@@ -1110,10 +1082,8 @@
                 hideTypingIndicator();
                 addChatMessage(aiResponse, false, true);
                 
-                // Save Chat Session History
                 await saveSessionHistory(userText);
 
-                // Preserve individual legacy logs
                 await addDoc(collection(db, "ai_chat_logs"), {
                     user_text: userText, ai_response: aiResponse, timestamp: Date.now(), user_email: currentUserEmail
                 });
@@ -1129,7 +1099,6 @@
         try {
             const timestamp = Date.now();
             if (!currentSessionId) {
-                // Generate a session title
                 let title = lastUserMessage.substring(0, 30);
                 if (lastUserMessage.length > 30) title += "...";
                 
@@ -1170,7 +1139,6 @@
             let sessions = [];
             snap.forEach(doc => { sessions.push({ id: doc.id, ...doc.data() }); });
             
-            // Client-side sort by date newest first
             sessions.sort((a, b) => b.updated_at - a.updated_at);
             
             if (sessions.length === 0) {
@@ -1201,7 +1169,6 @@
         chatHistory = loadedHistory || [];
         chatScroll.innerHTML = ""; 
         
-        // Re-render UI from history data
         let foundAny = false;
         chatHistory.forEach(msg => {
             const text = msg.parts[0].text;
@@ -1210,7 +1177,7 @@
                 addChatMessage(text, true, false);
                 foundAny = true;
             } else if (msg.role === "model") {
-                if (text === "Understood.") return; // skip silent ack
+                if (text === "Understood.") return; 
                 addChatMessage(text, false, false);
                 foundAny = true;
             }
