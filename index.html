@@ -53,6 +53,41 @@
             transition: height 0.2s ease;
         }
 
+        /* --- Center Data Loading Circle Animation --- */
+        .spinner-circle {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #E2E8F0;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin-circle 0.85s linear infinite;
+            margin: 0 auto;
+        }
+        .spinner-circle.small {
+            width: 24px;
+            height: 24px;
+            border-width: 3px;
+        }
+        @keyframes spin-circle {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Global Overlay Loading State */
+        .global-spinner-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 12px;
+        }
+
         /* --- Splash Screen --- */
         #splashScreen {
             display: flex; flex-direction: column; justify-content: center; align-items: center;
@@ -451,6 +486,11 @@
 
 <div class="app-container">
 
+    <!-- Global Center Data Loading Overlay -->
+    <div class="global-spinner-overlay" id="globalSpinner">
+        <div class="spinner-circle"></div>
+    </div>
+
     <!-- SPLASH SCREEN -->
     <div id="splashScreen">
         <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
@@ -555,7 +595,7 @@
                 <button class="btn-translate" id="btnTranslate">Translate</button>
                 <div class="output-card"><div class="output-text" id="outputText">Translation will appear here...</div></div>
                 
-                <div class="static-disclaimer">Sorry, Garo AI may make mistakes, it will improve later slowly 🙂</div>
+                <div class="static-disclaimer">Sorry, Garo AI may make mistakes, it will improve later 🙂</div>
             </div>
 
             <!-- AI Chat Tab -->
@@ -854,7 +894,7 @@
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
-    import { getFirestore, doc, getDoc, collection, query, where, getDocs, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, getDocFromServer, collection, query, where, getDocs, getDocsFromServer, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
     import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
@@ -1016,6 +1056,10 @@
     const btnCloseShare = document.getElementById("btnCloseShare");
     const shareLinkDisplay = document.getElementById("shareLinkDisplay");
 
+    const globalSpinner = document.getElementById("globalSpinner");
+    function showGlobalSpinner() { if(globalSpinner) globalSpinner.style.display = 'flex'; }
+    function hideGlobalSpinner() { if(globalSpinner) globalSpinner.style.display = 'none'; }
+
     window.openInfoModal = function(title, content, isHtml = false) {
         infoModalTitle.innerText = title;
         if (isHtml) {
@@ -1066,49 +1110,72 @@
     }
 
     // --- AUTHENTICATION STATE OBSERVER & LOGIC ---
-    onAuthStateChanged(auth, (user) => {
-        splashScreen.style.opacity = "0";
-        setTimeout(() => {
-            splashScreen.style.display = "none";
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const isEmailAuth = user.providerData.some(p => p.providerId === 'password');
             
-            if (user) {
-                const isEmailAuth = user.providerData.some(p => p.providerId === 'password');
-                
-                if (isEmailAuth && !user.emailVerified) {
+            if (isEmailAuth && !user.emailVerified) {
+                splashScreen.style.opacity = "0";
+                setTimeout(() => { 
+                    splashScreen.style.display = "none";
                     loginScreen.style.display = "none";
                     appMain.style.display = "none";
                     verifyEmailScreen.style.display = "flex";
                     verifyEmailText.innerText = user.email;
                     appInitialized = false;
-                } else {
-                    currentUserEmail = user.email;
-                    currentUserName = user.displayName || "Garo AI User";
-                    currentUserUid = user.uid;
+                }, 300);
+            } else {
+                currentUserEmail = user.email;
+                currentUserName = user.displayName || "Garo AI User";
+                currentUserUid = user.uid;
 
+                if (!appInitialized) {
+                    // Update splash screen to represent real  fetching with no cache
+                    splashScreen.innerHTML = `
+                        <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
+                        <h2 class="splash-title"></h2>
+                        <div class="spinner-circle" style="margin-top: 24px; border-top-color: var(--primary);"></div>
+                        <div style="margin-top: 14px; font-size: 13px; color: var(--secondary); font-weight: 600; letter-spacing: 0.5px;">Loading Data please wait...</div>
+                    `;
+                    splashScreen.style.opacity = "1";
+                    splashScreen.style.display = "flex";
+
+                    await initMainApp(user);
+                    appInitialized = true;
+                }
+
+                splashScreen.style.opacity = "0";
+                setTimeout(() => {
+                    splashScreen.style.display = "none";
                     loginScreen.style.display = "none";
                     verifyEmailScreen.style.display = "none";
                     appMain.style.display = "flex";
-
-                    if (!appInitialized) {
-                        initMainApp(user);
-                        appInitialized = true;
-                    }
-                }
-            } else {
+                    
+                    // Reset splash screen DOM for clean future usage
+                    splashScreen.innerHTML = `
+                        <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
+                        <h2 class="splash-title">Garo AI</h2>
+                    `;
+                }, 400);
+            }
+        } else {
+            splashScreen.style.opacity = "0";
+            setTimeout(() => { 
+                splashScreen.style.display = "none"; 
                 loginScreen.style.display = "flex";
                 appMain.style.display = "none";
                 verifyEmailScreen.style.display = "none";
                 appInitialized = false;
-                
-                if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
-                if (paymentUnsubscribe) { paymentUnsubscribe(); paymentUnsubscribe = null; }
-                if (configUnsubscribe) { configUnsubscribe(); configUnsubscribe = null; }
-                if (userUnsubscribe) { userUnsubscribe(); userUnsubscribe = null; }
-                
-                authEmail.value = "";
-                authPassword.value = "";
-            }
-        }, 300);
+            }, 300);
+            
+            if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
+            if (paymentUnsubscribe) { paymentUnsubscribe(); paymentUnsubscribe = null; }
+            if (configUnsubscribe) { configUnsubscribe(); configUnsubscribe = null; }
+            if (userUnsubscribe) { userUnsubscribe(); userUnsubscribe = null; }
+            
+            authEmail.value = "";
+            authPassword.value = "";
+        }
     });
 
     authSwitchLink.onclick = (e) => {
@@ -1141,13 +1208,16 @@
 
         btnEmailLogin.disabled = true;
         btnEmailLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        showGlobalSpinner();
         
         signInWithEmailAndPassword(auth, email, pwd)
             .then(() => {
+                hideGlobalSpinner();
                 btnEmailLogin.disabled = false;
                 btnEmailLogin.innerText = "Sign In";
             })
             .catch(error => {
+                hideGlobalSpinner();
                 btnEmailLogin.disabled = false;
                 btnEmailLogin.innerText = "Sign In";
                 showToast(getAuthErrorMessage(error.code));
@@ -1168,6 +1238,7 @@
         
         btnEmailSignUp.disabled = true;
         btnEmailSignUp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        showGlobalSpinner();
         
         createUserWithEmailAndPassword(auth, email, pwd)
             .then((userCredential) => {
@@ -1175,10 +1246,12 @@
                     showToast("Verification link sent! Please check your inbox & spam folder.");
                 }).catch((e) => console.error("Error sending verification", e));
 
+                hideGlobalSpinner();
                 btnEmailSignUp.disabled = false;
                 btnEmailSignUp.innerText = "Create Account";
             })
             .catch(error => {
+                hideGlobalSpinner();
                 btnEmailSignUp.disabled = false;
                 btnEmailSignUp.innerText = "Create Account";
                 showToast(getAuthErrorMessage(error.code));
@@ -1190,10 +1263,12 @@
         btnCheckVerified.disabled = true;
         const originalText = btnCheckVerified.innerText;
         btnCheckVerified.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+        showGlobalSpinner();
         
         try {
             await auth.currentUser.reload(); 
             if (auth.currentUser.emailVerified) {
+                hideGlobalSpinner();
                 showToast("Email verified successfully!");
                 verifyEmailScreen.style.display = "none";
                 appMain.style.display = "flex";
@@ -1203,15 +1278,17 @@
                 currentUserUid = auth.currentUser.uid;
                 
                 if (!appInitialized) {
-                    initMainApp(auth.currentUser);
+                    await initMainApp(auth.currentUser);
                     appInitialized = true;
                 }
             } else {
+                hideGlobalSpinner();
                 showToast("Email not verified yet. Please click the link in your inbox.");
                 btnCheckVerified.disabled = false;
                 btnCheckVerified.innerText = originalText;
             }
         } catch(e) {
+            hideGlobalSpinner();
             showToast("Error checking verification status.");
             btnCheckVerified.disabled = false;
             btnCheckVerified.innerText = originalText;
@@ -1256,13 +1333,16 @@
     };
 
     btnGoogleLogin.onclick = () => {
+        showGlobalSpinner();
         signInWithPopup(auth, provider).then((result) => {
+            hideGlobalSpinner();
             const email = result.user.email;
             if(!isValidRealEmail(email)){
                 signOut(auth);
                 showToast("This email provider is not allowed.");
             }
         }).catch(error => {
+            hideGlobalSpinner();
             showToast("Login Failed: " + error.message);
         });
     };
@@ -1274,11 +1354,33 @@
     };
 
     // --- MAIN APP INITIALIZATION ---
-    function initMainApp(user) {
-        startNewChatSession();
+    async function initMainApp(user) {
         setupProfileData(user);
+        
+        // Block UI and force a real server fetch with NO CACHE to ensure parameters are live
+        try {
+            const configRef = doc(db, "settings", "app_config");
+            const docSnap = await getDocFromServer(configRef);
+            if (docSnap.exists()) {
+                applyConfigData(docSnap.data());
+            }
+            
+            const safeEmail = currentUserEmail.replace(/@/g, "_at_").replace(/\./g, "_dot_");
+            const userRef = doc(db, "users", safeEmail);
+            const userSnap = await getDocFromServer(userRef);
+            if (userSnap.exists()) {
+                const data = userSnap.data();
+                const plan = data.plan || "";
+                isPremium = (plan.toLowerCase() === "premium" || plan.toLowerCase() === "pro");
+            }
+            updateUsageUI();
+        } catch (e) {
+            console.warn("Real data load from server failed, relying on cache/listeners", e);
+        }
+
         listenForAdminConfigurations();
         listenForDataAndNotifications();
+        startNewChatSession();
     }
 
     function startNewChatSession() {
@@ -1368,6 +1470,40 @@
         });
     };
 
+    // --- CONFIG APPLY UTIL ---
+    function applyConfigData(data) {
+        if (data.gemini_api_key) dynamicApiKey = data.gemini_api_key;
+        if (data.daily_limit) dailyLimit = parseInt(data.daily_limit);
+        if (data.qr_image_url) defaultQrImageUrl = data.qr_image_url;
+        if (data.share_link) appShareLink = data.share_link;
+        
+        if (data.membership_enabled !== undefined) {
+            isMembershipEnabled = (data.membership_enabled === true || data.membership_enabled === "true");
+        } else {
+            isMembershipEnabled = true;
+        }
+
+        if (data.membership_disabled_message !== undefined) {
+            membershipDisabledMessage = data.membership_disabled_message;
+        }
+        
+        if (data.membership_plans) {
+            try { membershipPlans = JSON.parse(data.membership_plans); } 
+            catch(e) { membershipPlans = []; }
+        }
+
+        if (data.update_available) {
+            const newVer = data.update_version || "";
+            if (newVer !== CURRENT_APP_VERSION) {
+                const force = data.force_update || false;
+                const msg = data.update_message || "A new update is available! Please update for the best experience.";
+                updateLinkUrl = data.update_link || "";
+                showAppUpdateDialog(newVer, msg, force);
+            }
+        }
+        updateUsageUI(); 
+    }
+
     // --- REALTIME CONFIGURATIONS ---
     function listenForAdminConfigurations() {
         if (configUnsubscribe) configUnsubscribe();
@@ -1376,39 +1512,7 @@
         const configRef = doc(db, "settings", "app_config");
         configUnsubscribe = onSnapshot(configRef, (docSnap) => {
             if (docSnap.exists()) {
-                const data = docSnap.data();
-                if (data.gemini_api_key) dynamicApiKey = data.gemini_api_key;
-                if (data.daily_limit) dailyLimit = parseInt(data.daily_limit);
-                if (data.qr_image_url) defaultQrImageUrl = data.qr_image_url;
-                if (data.share_link) appShareLink = data.share_link;
-                
-                // Real-time Boolean/String parsing for robust immediate toggle switch
-                if (data.membership_enabled !== undefined) {
-                    isMembershipEnabled = (data.membership_enabled === true || data.membership_enabled === "true");
-                } else {
-                    isMembershipEnabled = true;
-                }
-
-                // Custom Admin Disabled Message
-                if (data.membership_disabled_message !== undefined) {
-                    membershipDisabledMessage = data.membership_disabled_message;
-                }
-                
-                if (data.membership_plans) {
-                    try { membershipPlans = JSON.parse(data.membership_plans); } 
-                    catch(e) { membershipPlans = []; }
-                }
-
-                if (data.update_available) {
-                    const newVer = data.update_version || "";
-                    if (newVer !== CURRENT_APP_VERSION) {
-                        const force = data.force_update || false;
-                        const msg = data.update_message || "A new update is available! Please update for the best experience.";
-                        updateLinkUrl = data.update_link || "";
-                        showAppUpdateDialog(newVer, msg, force);
-                    }
-                }
-                updateUsageUI(); 
+                applyConfigData(docSnap.data());
             }
         });
 
@@ -1780,12 +1884,12 @@
     };
 
     function typeWriterEffect(element, text, speed = 15, onComplete = null) {
-        element.innerText = "";
+        element.innerHTML = "";
         element.classList.add("typing-cursor"); 
         let i = 0;
         function type() {
             if (i < text.length) {
-                element.innerText += text.charAt(i);
+                element.innerHTML += text.charAt(i);
                 i++;
                 if (element.classList.contains("chat-ai")) chatScroll.scrollTop = chatScroll.scrollHeight;
                 setTimeout(type, speed);
@@ -2135,6 +2239,7 @@
         btnSubmitUtr.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
 
         showToast("Submitting proof securely...");
+        showGlobalSpinner();
         try {
             await addDoc(collection(db, "payment_proofs"), {
                 user_email: currentUserEmail, 
@@ -2159,6 +2264,7 @@
         } catch (e) { 
             showToast("Network error. Failed to submit proof."); 
         } finally {
+            hideGlobalSpinner();
             btnSubmitUtr.disabled = false;
             btnSubmitUtr.innerText = originalText;
         }
@@ -2176,11 +2282,12 @@
         checkLimitAndProceed(async () => {
             btnTranslate.disabled = true;
             const normalizedText = text.toLowerCase().trim();
-            outputText.innerText = "Translating...";
+            outputText.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding: 20px;"><div class="spinner-circle small"></div><div style="font-size:14px; color:var(--secondary);">Translating...</div></div>`;
 
             try {
+                // Ensure no cache fetch from Firestore
                 const q = query(collection(db, "translations"), where("normalized", "==", normalizedText));
-                const querySnapshot = await getDocs(q);
+                const querySnapshot = await getDocsFromServer(q);
                 let foundTranslation = null;
 
                 querySnapshot.forEach((doc) => {
@@ -2195,7 +2302,8 @@
                     return;
                 }
 
-                outputText.innerText = "Translating...";
+                outputText.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding: 20px;"><div class="spinner-circle small"></div><div style="font-size:14px; color:var(--secondary);">Translating...</div></div>`;
+                
                 let prompt = `Translate the following ${sourceLang} text to ${targetLang} language. Provide ONLY the exact translation, no explanations. `;
                 
                 if (targetLang === "Garo") {
@@ -2206,8 +2314,10 @@
                 prompt += `Text to translate: ${text}`;
 
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] })
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                    body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }),
+                    cache: 'no-store'
                 });
 
                 const data = await response.json();
@@ -2259,8 +2369,10 @@
                 }
 
                 const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
-                    method: 'POST', headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ contents: payloadHistory })
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                    body: JSON.stringify({ contents: payloadHistory }),
+                    cache: 'no-store'
                 });
 
                 const data = await response.json();
@@ -2320,11 +2432,11 @@
 
     btnOpenHistory.onclick = async () => {
         chatHistoryScreen.style.display = "flex";
-        historyListContainer.innerHTML = `<div class="empty-history"><i class="fa-solid fa-spinner fa-spin"></i> Loading History...</div>`;
+        historyListContainer.innerHTML = `<div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; min-height:200px;"><div class="spinner-circle"></div><div style="font-size:13px; color:var(--secondary); font-weight: 600;">Loading History...</div></div>`;
         
         try {
             const q = query(collection(db, "chat_sessions"), where("user_email", "==", currentUserEmail));
-            const snap = await getDocs(q);
+            const snap = await getDocsFromServer(q); // Force server fetch (No Cache)
             let sessions = [];
             snap.forEach(doc => { sessions.push({ id: doc.id, ...doc.data() }); });
             
