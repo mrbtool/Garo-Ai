@@ -1,0 +1,2508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+    <title>Garo AI</title>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #4361EE;
+            --secondary: #8D99AE;
+            --text-dark: #2B2D42;
+            --bg-light: #F8F9FA;
+            --white: #FFFFFF;
+            --user-chat-bg: #4361EE;
+            --ai-chat-bg: #E2E8F0;
+            --app-height: 100dvh;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        html, body {
+            height: 100%;
+            width: 100%;
+            margin: 0;
+            padding: 0;
+            overflow: hidden; /* Prevent native body pan */
+            background-color: #E5E5E5;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+        }
+
+        /* Mobile Container */
+        .app-container {
+            width: 100%;
+            max-width: 480px;
+            background-color: var(--bg-light);
+            height: var(--app-height); 
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            box-shadow: 0 0 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            transition: height 0.2s ease;
+        }
+
+        /* --- Center Data Loading Circle Animation --- */
+        .spinner-circle {
+            width: 36px;
+            height: 36px;
+            border: 4px solid #E2E8F0;
+            border-top: 4px solid var(--primary);
+            border-radius: 50%;
+            animation: spin-circle 0.85s linear infinite;
+            margin: 0 auto;
+        }
+        .spinner-circle.small {
+            width: 24px;
+            height: 24px;
+            border-width: 3px;
+        }
+        @keyframes spin-circle {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        /* Global Overlay Loading State */
+        .global-spinner-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+            z-index: 1000;
+            display: none;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        /* --- Splash Screen --- */
+        #splashScreen {
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%; width: 100%; background: var(--bg-light); position: absolute; 
+            top: 0; left: 0; z-index: 200; transition: opacity 0.4s ease;
+        }
+        .splash-logo { font-size: 54px; color: var(--primary); margin-bottom: 16px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); }
+        .splash-title { font-size: 28px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.5px; }
+
+        /* --- Login Screen --- */
+        #loginScreen {
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%; width: 100%; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            padding: 20px; text-align: center; position: absolute; top: 0; left: 0; z-index: 50;
+            overflow-y: auto;
+        }
+        .login-logo { font-size: 50px; color: var(--primary); margin-bottom: 16px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); }
+        .login-title { font-size: 28px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; letter-spacing: -0.5px;}
+        .login-subtitle { font-size: 14px; color: var(--secondary); margin-bottom: 24px; line-height: 1.5; padding: 0 20px;}
+        
+        /* New Auth Form Styles */
+        .auth-form-container { width: 100%; max-width: 320px; display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px; }
+        .input-group { display: flex; align-items: center; background: var(--white); border: 1px solid #dadce0; border-radius: 12px; padding: 12px 16px; gap: 12px; transition: border-color 0.2s, box-shadow 0.2s; }
+        .input-group:focus-within { border-color: var(--primary); box-shadow: 0 0 0 3px rgba(67, 97, 238, 0.1); }
+        .input-group i { color: var(--secondary); font-size: 16px; }
+        .input-group input { border: none; outline: none; background: transparent; width: 100%; font-size: 15px; color: var(--text-dark); }
+        .auth-options { display: flex; justify-content: flex-end; width: 100%; margin-top: -4px; margin-bottom: 4px; }
+        .forgot-pwd { font-size: 13px; color: var(--primary); font-weight: 600; cursor: pointer; transition: opacity 0.2s; }
+        .forgot-pwd:hover { opacity: 0.8; }
+        
+        .btn-email-auth { background: var(--primary); color: var(--white); border: none; padding: 14px 24px; border-radius: 30px; font-size: 16px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3); display: flex; justify-content: center; align-items: center; width: 100%; }
+        .btn-email-auth:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(67, 97, 238, 0.4); }
+        .btn-email-auth:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        .auth-switch { font-size: 14px; color: var(--secondary); margin-top: 8px; }
+        .auth-switch a { color: var(--primary); font-weight: bold; text-decoration: none; cursor: pointer; }
+        
+        .auth-divider { display: flex; align-items: center; width: 100%; max-width: 320px; margin-bottom: 20px; color: var(--secondary); font-size: 12px; font-weight: 600; }
+        .auth-divider::before, .auth-divider::after { content: ""; flex: 1; height: 1px; background: #dadce0; }
+        .auth-divider span { padding: 0 10px; }
+
+        .btn-google {
+            display: flex; align-items: center; justify-content: center; gap: 12px;
+            background: var(--white); color: #3c4043; border: 1px solid #dadce0;
+            padding: 14px 24px; border-radius: 30px; font-size: 15px; font-weight: 600;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(0,0,0,0.05); transition: all 0.2s ease; width: 100%; max-width: 320px;
+        }
+        .btn-google:hover { background: #f8f9fa; box-shadow: 0 6px 16px rgba(0,0,0,0.08); transform: translateY(-1px);}
+        .btn-google img { width: 22px; height: 22px; }
+
+        /* --- Verify Email Screen --- */
+        #verifyEmailScreen {
+            display: none; flex-direction: column; justify-content: center; align-items: center;
+            height: 100%; width: 100%; background: linear-gradient(135deg, #fdfbfb 0%, #ebedee 100%);
+            padding: 20px; text-align: center; position: absolute; top: 0; left: 0; z-index: 55;
+            overflow-y: auto;
+        }
+        .verify-icon { font-size: 60px; color: var(--primary); margin-bottom: 20px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); }
+        .verify-title { font-size: 26px; font-weight: 800; color: var(--text-dark); margin-bottom: 12px; }
+        .verify-subtitle { font-size: 15px; color: var(--secondary); margin-bottom: 24px; line-height: 1.5; padding: 0 10px;}
+        .verify-email-text { font-weight: bold; color: var(--primary); }
+        
+        .btn-verify-action { background: var(--primary); color: var(--white); border: none; padding: 14px 24px; border-radius: 30px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3); width: 100%; max-width: 320px; margin-bottom: 12px;}
+        .btn-verify-action:hover { transform: translateY(-1px); box-shadow: 0 6px 16px rgba(67, 97, 238, 0.4); }
+        .btn-verify-action:disabled { opacity: 0.7; cursor: not-allowed; }
+        
+        .btn-verify-secondary { background: var(--white); color: var(--text-dark); border: 1px solid #dadce0; padding: 10px 24px; border-radius: 30px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s ease; width: 100%; max-width: 320px; margin-bottom: 12px; box-shadow: 0 2px 6px rgba(0,0,0,0.03); line-height: 1.4;}
+        .btn-verify-secondary:hover { background: #f8f9fa; transform: translateY(-1px); }
+        
+        .btn-verify-outline { background: transparent; color: var(--primary); border: 2px solid var(--primary); padding: 14px 24px; border-radius: 30px; font-size: 15px; font-weight: bold; cursor: pointer; transition: all 0.2s ease; width: 100%; max-width: 320px; margin-bottom: 12px;}
+        .btn-verify-outline:hover { background: rgba(67, 97, 238, 0.05); }
+
+        /* Tutorial Styles */
+        .tutorial-step { text-align: left; background: #F8F9FA; padding: 12px; border-radius: 12px; margin-bottom: 10px; border: 1px solid #E2E8F0; display: flex; gap: 12px; align-items: center; }
+        .tutorial-step-num { background: var(--primary); color: white; width: 24px; height: 24px; display: flex; justify-content: center; align-items: center; border-radius: 50%; font-size: 12px; font-weight: bold; flex-shrink: 0;}
+        .tutorial-step-text { font-size: 13px; color: var(--text-dark); line-height: 1.4; }
+
+        /* Main App Wrapper */
+        #appMain { display: none; flex-direction: column; height: 100%; width: 100%; }
+
+        /* Header */
+        .header { background-color: var(--white); padding: max(16px, env(safe-area-inset-top)) 20px 16px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.05); z-index: 10; flex-shrink: 0;}
+        .header h1 { font-size: 20px; color: var(--text-dark); }
+        .header-icons { display: flex; align-items: center; gap: 18px; }
+
+        /* Main Content */
+        .main-content { flex: 1; position: relative; display: flex; flex-direction: column; overflow-x: hidden; scroll-behavior: smooth;}
+
+        /* --- Translate Section --- */
+        #sectionTranslate { padding: 20px 20px calc(100px + env(safe-area-inset-bottom)) 20px; display: flex; flex-direction: column; gap: 15px; flex: 1; overflow-y: auto;}
+        .lang-selectors { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+        .lang-selectors select { flex: 1; padding: 12px; border-radius: 8px; border: 1px solid #E2E8F0; outline: none; font-size: 14px; background: var(--white); color: var(--text-dark); font-weight: 500; box-shadow: 0 2px 5px rgba(0,0,0,0.02);}
+        .btn-swap { background: transparent; border: none; color: var(--primary); cursor: pointer; font-size: 18px; padding: 5px; transition: transform 0.2s;}
+        .btn-swap:active { transform: scale(0.8); }
+        .input-card, .output-card { background: var(--white); border-radius: 12px; padding: 15px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        textarea { width: 100%; border: none; resize: none; outline: none; font-size: 16px; color: var(--text-dark); min-height: 100px; }
+        .btn-translate { background-color: var(--primary); color: var(--white); border: none; border-radius: 8px; padding: 14px; font-size: 16px; font-weight: bold; cursor: pointer; transition: opacity 0.2s; }
+        .btn-translate:disabled { opacity: 0.5; cursor: not-allowed; }
+        .output-text { color: var(--text-dark); font-size: 16px; min-height: 100px; white-space: pre-wrap; }
+        
+        .static-disclaimer { font-size: 12px; text-align: center; color: #8D99AE; margin-top: -5px; }
+
+        /* --- Chat Section --- */
+        #sectionChat { display: none; flex-direction: column; height: 100%; position: relative; overflow: hidden; }
+        .chat-scroll { flex: 1; padding: 16px 16px calc(90px + env(safe-area-inset-bottom)) 16px; overflow-y: auto; display: flex; flex-direction: column; gap: 16px; scroll-behavior: smooth; }
+        
+        .chat-wrapper { display: flex; flex-direction: column; max-width: 85%; }
+        .chat-wrapper.user { align-self: flex-end; align-items: flex-end; }
+        .chat-wrapper.ai { align-self: flex-start; align-items: flex-start; }
+        
+        .chat-bubble { width: fit-content; padding: 12px 16px; border-radius: 16px; font-size: 15px; line-height: 1.4; word-wrap: break-word; white-space: pre-wrap; cursor: default;}
+        .chat-ai { background-color: var(--ai-chat-bg); color: var(--text-dark); border-bottom-left-radius: 4px; }
+        .chat-user { background-color: var(--user-chat-bg); color: var(--white); border-bottom-right-radius: 4px; transition: opacity 0.2s;}
+        .chat-user:active { opacity: 0.8; }
+        
+        .chat-disclaimer { font-size: 11px; color: #8D99AE; margin-top: 6px; margin-left: 6px; }
+
+        /* Absolute Floating Input Box */
+        .chat-input-container { 
+            position: absolute;
+            bottom: calc(15px + env(safe-area-inset-bottom));
+            left: 15px; 
+            right: 15px;
+            background-color: rgba(255, 255, 255, 0.98); 
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            padding: 6px 6px 6px 16px; 
+            display: flex; align-items: center; gap: 10px; 
+            box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border-radius: 30px;
+            border: 1px solid rgba(226, 232, 240, 0.8);
+            transition: transform 0.25s cubic-bezier(0.25, 1, 0.5, 1), opacity 0.2s ease, bottom 0.2s ease;
+            z-index: 15; 
+        }
+        
+        .chat-input-container.input-hidden {
+            transform: translateY(150%);
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .chat-input-container input { 
+            flex: 1; border: none; padding: 10px 0; font-size: 15px; 
+            outline: none; background: transparent; color: var(--text-dark);
+        }
+        .btn-send { background-color: var(--primary); color: var(--white); width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; border: none; cursor: pointer; transition: opacity 0.2s; flex-shrink: 0;}
+        .btn-send:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        /* Typing Indicator */
+        .typing-indicator { display: flex; gap: 4px; padding: 12px 16px; background-color: var(--ai-chat-bg); border-radius: 16px; border-bottom-left-radius: 4px; width: fit-content; align-items: center;}
+        .typing-dot { width: 6px; height: 6px; background: var(--secondary); border-radius: 50%; animation: typing 1.4s infinite ease-in-out both; }
+        .typing-dot:nth-child(1) { animation-delay: -0.32s; }
+        .typing-dot:nth-child(2) { animation-delay: -0.16s; }
+        @keyframes typing { 0%, 80%, 100% { transform: scale(0); } 40% { transform: scale(1); } }
+        .typing-cursor::after { content: '|'; animation: blink 1s step-start infinite; }
+        @keyframes blink { 50% { opacity: 0; } }
+
+        /* --- Notifications Section --- */
+        #sectionNotifications { display: none; flex-direction: column; padding: 20px 20px calc(110px + env(safe-area-inset-bottom)) 20px; gap: 12px; flex: 1; background: #F1F5F9; overflow-y: auto;}
+        .notif-card { background: var(--white); border-radius: 12px; padding: 16px; display: flex; gap: 14px; box-shadow: 0 2px 8px rgba(0,0,0,0.03); cursor: pointer; transition: transform 0.2s; border: 1px solid #E2E8F0; position: relative; }
+        .notif-card:active { transform: scale(0.98); }
+        .notif-card.unread { border-left: 4px solid var(--primary); background: #F8FAFC; }
+        .notif-icon { width: 40px; height: 40px; border-radius: 50%; display: flex; justify-content: center; align-items: center; font-size: 18px; flex-shrink: 0; }
+        .notif-icon.approve { background: #D1FAE5; color: #10B981; }
+        .notif-icon.reject { background: #FEE2E2; color: #EF4444; }
+        .notif-icon.custom { background: #DBEAFE; color: #3B82F6; }
+        .notif-icon.pending { background: #FEF3C7; color: #D97706; }
+        .notif-content { flex: 1; display: flex; flex-direction: column; gap: 4px; }
+        .notif-title { font-size: 15px; font-weight: 700; color: var(--text-dark); }
+        .notif-msg { font-size: 13px; color: var(--secondary); line-height: 1.4; }
+        .notif-time { font-size: 11px; color: #94A3B8; margin-top: 2px; }
+        .notif-empty { text-align: center; color: var(--secondary); margin-top: 40px; font-size: 14px; }
+
+        /* --- Membership Section --- */
+        #sectionMembership { display: none; flex-direction: column; padding: 20px 20px calc(110px + env(safe-area-inset-bottom)) 20px; gap: 20px; flex: 1; background: #F1F5F9; overflow-y: auto;}
+        .membership-card { background: var(--white); border-radius: 16px; padding: 24px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); text-align: center; display: flex; flex-direction: column; gap: 12px;}
+        .membership-card i.crown-icon { font-size: 52px; color: #F59E0B; margin-bottom: 5px; }
+        .membership-card h2 { font-size: 22px; color: var(--text-dark); font-weight: 800;}
+        .membership-card p { font-size: 14px; color: var(--secondary); line-height: 1.5; padding: 0 10px;}
+        .features-list { display: flex; flex-direction: column; gap: 14px; text-align: left; background: #F8F9FA; padding: 18px; border-radius: 12px; border: 1px solid #E2E8F0; margin: 10px 0;}
+        .feature-item { display: flex; align-items: center; gap: 12px; font-size: 14px; color: var(--text-dark); font-weight: 600;}
+        .feature-item i { color: #10B981; font-size: 18px; width: 20px; text-align: center;}
+        .btn-upgrade-main { background: linear-gradient(135deg, #F59E0B, #D97706); color: white; border: none; padding: 16px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 6px 20px rgba(245, 158, 11, 0.3);}
+        .btn-upgrade-main:active { transform: scale(0.96); }
+
+        /* Membership History Panel */
+        .membership-history-section { text-align: left; margin-top: 10px; padding: 0 4px; }
+        .membership-history-title { font-size: 16px; color: var(--text-dark); font-weight: bold; margin-bottom: 12px; }
+        .history-card { background: var(--white); border-radius: 12px; padding: 14px 16px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.03); border: 1px solid #E2E8F0; margin-bottom: 10px; }
+        .history-card-left { display: flex; flex-direction: column; gap: 4px; }
+        .history-card-title { font-size: 14px; font-weight: bold; color: var(--text-dark); }
+        .history-card-date { font-size: 11px; color: var(--secondary); }
+        .history-status { font-size: 10px; font-weight: 800; padding: 4px 10px; border-radius: 12px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .status-Pending { background: #FEF3C7; color: #D97706; }
+        .status-Approved { background: #D1FAE5; color: #10B981; }
+        .status-Rejected { background: #FEE2E2; color: #EF4444; }
+
+        /* --- Premium Profile Section --- */
+        #sectionProfile { display: none; flex-direction: column; padding: 20px 20px calc(110px + env(safe-area-inset-bottom)) 20px; gap: 20px; flex: 1; background: #F1F5F9; overflow-y: auto;}
+        .profile-header { background: var(--white); border-radius: 16px; padding: 20px; display: flex; align-items: center; gap: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); }
+        .profile-header img { width: 70px; height: 70px; border-radius: 50%; border: 3px solid #E2E8F0; object-fit: cover; }
+        .profile-info { display: flex; flex-direction: column; align-items: flex-start; gap: 4px; overflow: hidden; width: 100%;}
+        .profile-name { color: var(--text-dark); font-size: 18px; margin: 0; font-weight: bold; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; width: 100%;}
+        .profile-id { font-size: 11px; color: var(--secondary); font-weight: 700; background: #F1F5F9; padding: 2px 8px; border-radius: 12px; letter-spacing: 0.5px;}
+        .profile-email-container { display: flex; align-items: center; gap: 8px; font-size: 13px; color: #64748B; margin-bottom: 4px; }
+        .profile-email-container i { cursor: pointer; color: var(--primary); font-size: 14px; padding: 4px; transition: color 0.2s;}
+        
+        .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase;}
+        .badge.free { background: #E2E8F0; color: #475569; }
+        .badge.premium { background: #FEF08A; color: #854D0E; }
+
+        .usage-stats-card { background: linear-gradient(135deg, var(--primary), #3a0ca3); border-radius: 16px; padding: 20px; color: white; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 12px rgba(67, 97, 238, 0.2);}
+        .usage-text-group { display: flex; flex-direction: column; gap: 4px;}
+        .usage-text-group span { font-size: 13px; opacity: 0.9;}
+        .usage-text-group strong { font-size: 20px; font-weight: bold;}
+        .usage-icon { font-size: 32px; opacity: 0.8; }
+
+        .profile-menu { background: var(--white); border-radius: 16px; box-shadow: 0 4px 12px rgba(0,0,0,0.03); overflow: hidden; display: flex; flex-direction: column;}
+        .profile-menu-item { display: flex; align-items: center; justify-content: space-between; padding: 18px 20px; border-bottom: 1px solid #F1F5F9; cursor: pointer; transition: background 0.2s; }
+        .profile-menu-item:last-child { border-bottom: none; }
+        .profile-menu-item:active, .profile-menu-item:hover { background: #F8F9FA; }
+        .menu-left { display: flex; align-items: center; gap: 14px; font-size: 15px; color: var(--text-dark); font-weight: 500; }
+        .menu-left i { font-size: 18px; color: var(--secondary); width: 24px; text-align: center; }
+        .menu-right i { font-size: 14px; color: #CBD5E1; }
+        .menu-danger .menu-left, .menu-danger .menu-left i { color: #ef233c; }
+
+        /* --- Floating Bottom Overlay Layout --- */
+        .bottom-overlay-container {
+            position: absolute;
+            bottom: calc(20px + env(safe-area-inset-bottom));
+            left: 15px; right: 15px;
+            z-index: 20;
+            pointer-events: none;
+            transition: opacity 0.25s cubic-bezier(0.25, 1, 0.5, 1), transform 0.25s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        
+        .bottom-overlay-container.nav-hidden {
+            opacity: 0; transform: translateY(150%); pointer-events: none;
+        }
+
+        .bottom-nav {
+            background-color: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            display: flex; box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+            border-radius: 30px; 
+            pointer-events: auto;
+            border: 1px solid rgba(255,255,255,0.8);
+            padding: 4px 6px;
+            width: 100%;
+        }
+
+        /* Nav Item Adjusted for 5 Items */
+        .nav-item { flex: 1; padding: 10px 0; display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; color: var(--secondary); transition: color 0.2s; position: relative; }
+        .nav-item.active { color: var(--primary); font-weight: bold; }
+        .nav-item i { font-size: 18px; }
+        .nav-item span.nav-text { font-size: 10px; text-transform: uppercase; letter-spacing: 0.5px;}
+
+        /* Notification Badge */
+        .nav-badge { position: absolute; top: 4px; right: calc(50% - 15px); background: #ef233c; color: white; font-size: 9px; font-weight: bold; padding: 2px 5px; border-radius: 10px; border: 1.5px solid white; display: none; }
+
+        /* --- Chat History Overlay Screen --- */
+        #chatHistoryScreen {
+            display: none; flex-direction: column; position: absolute; top: 0; left: 0; right: 0; bottom: 0; 
+            background: var(--bg-light); z-index: 60; overflow: hidden;
+        }
+        .history-list-container { flex: 1; overflow-y: auto; padding: 20px; display: flex; flex-direction: column; gap: 12px; }
+        .history-item { background: var(--white); padding: 16px; border-radius: 12px; display: flex; flex-direction: column; gap: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.04); cursor: pointer; transition: transform 0.2s; border: 1px solid #E2E8F0; }
+        .history-item:active { transform: scale(0.98); }
+        .history-title { font-size: 15px; font-weight: 600; color: var(--text-dark); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .history-date { font-size: 12px; color: var(--secondary); }
+        .empty-history { text-align: center; color: var(--secondary); margin-top: 40px; font-size: 14px; }
+
+        /* --- Custom Slide-Up Share Modal --- */
+        .share-overlay {
+            position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.5); z-index: 200;
+            opacity: 0; visibility: hidden; transition: opacity 0.3s ease; backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+        }
+        .share-overlay.show { opacity: 1; visibility: visible; }
+        
+        .share-modal {
+            position: absolute; bottom: 0; left: 0; right: 0; background: var(--bg-light); border-top-left-radius: 28px; border-top-right-radius: 28px;
+            padding: 24px 20px calc(24px + env(safe-area-inset-bottom)); box-shadow: 0 -10px 40px rgba(0,0,0,0.15);
+            transform: translateY(100%); transition: transform 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+        .share-modal.show { transform: translateY(0); }
+        .share-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .share-header h3 { font-size: 18px; font-weight: 800; color: var(--text-dark); margin: 0; }
+        .share-close-btn { width: 32px; height: 32px; background: #E2E8F0; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: var(--text-dark); font-size: 14px; cursor: pointer; transition: transform 0.2s; }
+        .share-close-btn:active { transform: scale(0.9); }
+        
+        .share-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+        .share-btn-item { display: flex; flex-direction: column; align-items: center; gap: 8px; cursor: pointer; }
+        .share-icon-circle { width: 54px; height: 54px; border-radius: 50%; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; transition: transform 0.2s, box-shadow 0.2s; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+        .share-btn-item:active .share-icon-circle { transform: scale(0.92); }
+        .share-text { font-size: 12px; font-weight: 600; color: var(--text-dark); text-align: center; }
+        
+        .bg-wa { background: #25D366; box-shadow: 0 4px 12px rgba(37, 211, 102, 0.3); }
+        .bg-fb { background: #1877F2; box-shadow: 0 4px 12px rgba(24, 119, 242, 0.3); }
+        .bg-tw { background: #000000; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3); }
+        .bg-em { background: #EA4335; box-shadow: 0 4px 12px rgba(234, 67, 53, 0.3); }
+        
+        .share-link-box { display: flex; align-items: center; background: var(--white); border: 1px solid #E2E8F0; border-radius: 14px; padding: 6px; box-shadow: 0 2px 8px rgba(0,0,0,0.02); }
+        .share-link-box input { flex: 1; border: none; outline: none; background: transparent; padding: 10px 12px; font-size: 13px; color: var(--secondary); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-family: monospace;}
+        .share-copy-btn { background: var(--primary); color: white; border: none; padding: 10px 16px; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        .share-copy-btn:active { background: #3a0ca3; }
+
+        /* --- Modals --- */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: none; justify-content: center; align-items: center; z-index: 100; backdrop-filter: blur(3px);}
+        .modal-card { background: var(--white); width: 90%; max-width: 400px; border-radius: 16px; padding: 24px; display: flex; flex-direction: column; gap: 12px; max-height: 90vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.15);}
+        .modal-card h2 { font-size: 18px; color: var(--text-dark); margin-bottom: -5px;}
+        .modal-card p { font-size: 14px; color: #475569; line-height: 1.5; }
+        
+        .info-content { font-size: 13px; color: #475569; line-height: 1.6; white-space: pre-wrap; margin-top: 5px; max-height: 40vh; overflow-y: auto;}
+        .info-content a { color: var(--primary); text-decoration: none; font-weight: bold; }
+        .info-content a:hover { text-decoration: underline; }
+
+        /* 2-Column Premium Grid Design for Plans */
+        .plans-grid {
+            display: grid; 
+            grid-template-columns: repeat(2, 1fr); 
+            gap: 12px; 
+            margin-top: 15px; 
+            max-height: 45vh; 
+            overflow-y: auto;
+            padding: 4px;
+        }
+        .plan-item { 
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border: 2px solid #E2E8F0; 
+            border-radius: 16px; 
+            padding: 18px 12px; 
+            display: flex; 
+            flex-direction: column; 
+            justify-content: center; 
+            align-items: center; 
+            cursor: pointer; 
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); 
+            text-align: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            gap: 8px;
+        }
+        .plan-item:hover {
+            border-color: var(--primary);
+            box-shadow: 0 8px 15px rgba(67, 97, 238, 0.1);
+            transform: translateY(-2px);
+        }
+        .plan-item:active { 
+            transform: scale(0.96); 
+            background: #F8FAFC; 
+        }
+        .plan-name { 
+            font-weight: 700; 
+            color: var(--secondary); 
+            font-size: 12px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .plan-price { 
+            color: var(--text-dark); 
+            font-weight: 900; 
+            font-size: 22px; 
+            letter-spacing: -0.5px;
+        }
+        .plan-badge {
+            background: #E0E7FF;
+            color: #4361EE;
+            font-size: 10px;
+            font-weight: bold;
+            padding: 4px 10px;
+            border-radius: 12px;
+            margin-top: 2px;
+        }
+
+        .modal-card img.qr-img { width: 100%; height: auto; max-height: 200px; background: #eee; object-fit: contain; border-radius: 8px;}
+        .modal-card input[type="text"] { padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 14px; background: #F8F9FA; outline: none; }
+        .upload-container { display: flex; flex-direction: column; gap: 8px; border: 1px dashed #cbd5e1; padding: 12px; border-radius: 8px; background: #F8F9FA;}
+        .upload-container label { font-size: 12px; color: var(--text-dark); font-weight: bold;}
+        .modal-card input[type="file"] { font-size: 12px; }
+        #previewProof { display: none; margin-top: 5px; border-radius: 8px; max-height: 80px; object-fit: contain; border: 1px solid #ddd; }
+        
+        .modal-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 10px; }
+        .btn-modal { padding: 10px 16px; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 14px; transition: background 0.2s;}
+        .btn-cancel { background: #F1F5F9; color: var(--text-dark); }
+        .btn-cancel:hover { background: #E2E8F0; }
+        .btn-submit { background: var(--primary); color: var(--white); display: flex; align-items: center; justify-content: center; gap: 8px; transition: opacity 0.2s;}
+        .btn-submit:hover { background: #3a0ca3; }
+        .btn-submit:disabled { opacity: 0.7; cursor: not-allowed; }
+
+        /* Toast Notifications */
+        #toast { visibility: hidden; min-width: 250px; background-color: #1E293B; color: #fff; text-align: center; border-radius: 20px; padding: 12px 16px; position: fixed; z-index: 1000; left: 50%; bottom: calc(100px + env(safe-area-inset-bottom)); transform: translateX(-50%); font-size: 14px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);}
+        #toast.show { visibility: visible; animation: fadein 0.4s, fadeout 0.4s 2.5s; }
+        @keyframes fadein { from {bottom: 0; opacity: 0; transform: translate(-50%, 20px);} to {bottom: calc(100px + env(safe-area-inset-bottom)); opacity: 1; transform: translate(-50%, 0);} }
+        @keyframes fadeout { from {bottom: calc(100px + env(safe-area-inset-bottom)); opacity: 1; transform: translate(-50%, 0);} to {bottom: 0; opacity: 0; transform: translate(-50%, 20px);} }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+
+    <!-- Global Center Data Loading Overlay -->
+    <div class="global-spinner-overlay" id="globalSpinner">
+        <div class="spinner-circle"></div>
+    </div>
+
+    <!-- SPLASH SCREEN -->
+    <div id="splashScreen">
+        <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
+        <h2 class="splash-title">Garo AI</h2>
+    </div>
+
+    <!-- LOGIN SCREEN -->
+    <div id="loginScreen">
+        <i class="fa-solid fa-sparkles login-logo"></i>
+        <h1 class="login-title">Garo AI</h1>
+        <p class="login-subtitle">Your advanced language & chat assistant.<br>Sign in to continue.</p>
+        
+        <!-- Email & Password Form -->
+        <div class="auth-form-container" id="authFormContainer">
+            <div class="input-group">
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" id="authEmail" placeholder="Real Email Address" required>
+            </div>
+            
+            <div class="input-group">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" id="authPassword" placeholder="Password" required>
+            </div>
+            
+            <div class="auth-options">
+                <span class="forgot-pwd" id="btnForgotPassword">Forgot Password?</span>
+            </div>
+
+            <button class="btn-email-auth" id="btnEmailLogin">Sign In</button>
+            <button class="btn-email-auth" id="btnEmailSignUp" style="display:none;">Create Account</button>
+            
+            <div class="auth-switch">
+                <span id="authSwitchText">Don't have an account?</span> <a href="#" id="authSwitchLink">Sign Up</a>
+            </div>
+        </div>
+
+        <div class="auth-divider"><span>OR</span></div>
+
+        <button class="btn-google" id="btnGoogleLogin">
+            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="Google">
+            Continue with Google
+        </button>
+    </div>
+
+    <!-- VERIFY EMAIL SCREEN -->
+    <div id="verifyEmailScreen">
+        <i class="fa-solid fa-envelope-open-text verify-icon"></i>
+        <h1 class="verify-title">Verify Email</h1>
+        <p class="verify-subtitle">We've sent a secure verification link to:<br><span class="verify-email-text" id="verifyEmailText">user@example.com</span></p>
+        
+        <button class="btn-verify-action" id="btnCheckVerified">I have clicked the link</button>
+        <button class="btn-verify-secondary" id="btnShowVerifyTutorial" style="line-height: 1.4; padding: 10px 24px;">
+            <i class="fa-solid fa-circle-question" style="margin-right: 4px;"></i> How to find the link?
+            <br><span style="font-size: 11px; font-weight: 500; color: #64748B;">(Link-ko maikai am·gen?)</span>
+        </button>
+        <button class="btn-verify-outline" id="btnResendVerify">Resend Verification Link</button>
+        
+        <div style="margin-top: 20px; font-size: 13px;">
+            <a href="#" id="btnVerifyLogout" style="color: var(--secondary); text-decoration: underline; font-weight: bold;">Use a different account</a>
+        </div>
+    </div>
+
+    <!-- MAIN APP WRAPPER -->
+    <div id="appMain">
+        <div class="header">
+            <h1 id="headerTitle">Translate</h1>
+            <div class="header-icons">
+                <i class="fa-solid fa-pen-to-square" id="btnNewChat" style="display: none; color: var(--primary); font-size: 20px; cursor: pointer;" title="New Chat"></i>
+                <i class="fa-solid fa-gear" style="color: var(--secondary); font-size: 20px; cursor: pointer;" onclick="document.getElementById('navProfile').click()" title="Settings"></i>
+            </div>
+        </div>
+
+        <div class="main-content" id="mainContentScroll">
+            
+            <!-- Translate Tab -->
+            <div id="sectionTranslate">
+                <div class="lang-selectors">
+                    <select id="sourceLang">
+                        <option value="English" selected>English</option>
+                        <option value="Garo">Garo</option>
+                        <option value="Khasi">Khasi</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Bengali">Bengali</option>
+                        <option value="Assamese">Assamese</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="French">French</option>
+                    </select>
+                    <button id="btnSwapLang" class="btn-swap"><i class="fa-solid fa-right-left"></i></button>
+                    <select id="targetLang">
+                        <option value="Garo" selected>Garo</option>
+                        <option value="English">English</option>
+                        <option value="Khasi">Khasi</option>
+                        <option value="Hindi">Hindi</option>
+                        <option value="Bengali">Bengali</option>
+                        <option value="Assamese">Assamese</option>
+                        <option value="Spanish">Spanish</option>
+                        <option value="French">French</option>
+                    </select>
+                </div>
+
+                <div class="input-card"><textarea id="inputText" placeholder="Enter text here..."></textarea></div>
+                <button class="btn-translate" id="btnTranslate">Translate</button>
+                <div class="output-card"><div class="output-text" id="outputText">Translation will appear here...</div></div>
+                
+                <div class="static-disclaimer">Sorry, Garo AI may make mistakes, it will improve later 🙂</div>
+            </div>
+
+            <!-- AI Chat Tab -->
+            <div id="sectionChat">
+                <div class="chat-scroll" id="chatScroll"></div>
+                <!-- Floating Input Box -->
+                <div class="chat-input-container input-hidden" id="chatInputContainer">
+                    <input type="text" id="inputChat" placeholder="Type a message...">
+                    <button class="btn-send" id="btnSendChat"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </div>
+
+            <!-- Notifications Tab -->
+            <div id="sectionNotifications">
+                <div id="notificationsContainer">
+                    <!-- Dynamic notifications will be injected here -->
+                </div>
+            </div>
+
+            <!-- New Membership Tab -->
+            <div id="sectionMembership">
+                <div class="membership-card">
+                    <i class="fa-solid fa-crown crown-icon"></i>
+                    <h2>Premium Plans</h2>
+                    <p>Upgrade your account to increase your limits and unlock full AI potential.</p>
+                    
+                    <div class="features-list">
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Upgraded Translation Limits</div>
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Advanced Smart AI Chat</div>
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Premium Priority Speed</div>
+                        <div class="feature-item"><i class="fa-solid fa-check-circle"></i> Support App Development</div>
+                    </div>
+
+                    <button class="btn-upgrade-main" id="btnMembershipUpgrade">View Premium Plans</button>
+                </div>
+
+                <!-- Membership/Payment History Panel -->
+                <div class="membership-history-section">
+                    <h3 class="membership-history-title">Payment History</h3>
+                    <div id="membershipHistoryList">
+                        <!-- Fetched from backend -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Premium Profile Tab -->
+            <div id="sectionProfile">
+                <div class="profile-header">
+                    <img id="profileAvatar" src="https://via.placeholder.com/150" alt="Avatar">
+                    <div class="profile-info">
+                        <h3 class="profile-name" id="profileName">User Name</h3>
+                        <div class="profile-id" id="profileUserId">ID: #000000</div>
+                        <div class="profile-email-container">
+                            <span id="profileEmailText">user@example.com</span>
+                            <i class="fa-solid fa-eye-slash" id="profileEmailEye" title="Toggle Email Visibility"></i>
+                        </div>
+                        <div id="profileBadge" class="badge free">Free Plan</div>
+                    </div>
+                </div>
+                
+                <div class="usage-stats-card">
+                    <div class="usage-text-group">
+                        <span id="profileUsageLabel">Daily Free Limit</span>
+                        <strong id="profileUsage">0 / 10</strong>
+                    </div>
+                    <i class="fa-solid fa-bolt usage-icon"></i>
+                </div>
+
+                <div class="profile-menu">
+                    <div class="profile-menu-item" id="btnOpenHistory">
+                        <div class="menu-left"><i class="fa-solid fa-clock-rotate-left"></i>Chat History</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    
+                    <div class="profile-menu-item" id="btnShareApp">
+                        <div class="menu-left"><i class="fa-solid fa-share-nodes"></i>Share App</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+
+                    <div class="profile-menu-item" id="btnAboutApp">
+                        <div class="menu-left"><i class="fa-solid fa-circle-info"></i>About App</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    <div class="profile-menu-item" id="btnPrivacy">
+                        <div class="menu-left"><i class="fa-solid fa-shield-halved"></i>Privacy Policy</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    <div class="profile-menu-item" id="btnTerms">
+                        <div class="menu-left"><i class="fa-solid fa-file-contract"></i>Terms of Service</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    <div class="profile-menu-item" id="btnFaq">
+                        <div class="menu-left"><i class="fa-solid fa-circle-question"></i>FAQ & Support</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                    <div class="profile-menu-item menu-danger" id="btnProfileLogout">
+                        <div class="menu-left"><i class="fa-solid fa-right-from-bracket"></i>Logout Securely</div>
+                        <div class="menu-right"><i class="fa-solid fa-chevron-right"></i></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- OVERLAY BOTTOM NAVIGATION PILL WITH 5 TABS -->
+        <div class="bottom-overlay-container" id="bottomOverlay">
+            <div class="bottom-nav">
+                <div class="nav-item active" id="navTranslate"><i class="fa-solid fa-language"></i><span class="nav-text">Translate</span></div>
+                <div class="nav-item" id="navChat"><i class="fa-solid fa-robot"></i><span class="nav-text">AI Chat</span></div>
+                
+                <!-- NEW Notifications Tab Center -->
+                <div class="nav-item" id="navNotifications">
+                    <i class="fa-solid fa-bell"></i>
+                    <div class="nav-badge" id="notifBadge">0</div>
+                    <span class="nav-text">Alerts</span>
+                </div>
+
+                <div class="nav-item" id="navMembership"><i class="fa-solid fa-crown"></i><span class="nav-text">Premium</span></div>
+                <div class="nav-item" id="navProfile"><i class="fa-solid fa-user"></i><span class="nav-text">Profile</span></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NEW SLIDE-UP SHARE MODAL -->
+    <div class="share-overlay" id="shareModalOverlay">
+        <div class="share-modal" id="shareModalContent">
+            <div class="share-header">
+                <h3>Share Garo AI</h3>
+                <div class="share-close-btn" id="btnCloseShare"><i class="fa-solid fa-xmark"></i></div>
+            </div>
+            
+            <div class="share-grid">
+                <div class="share-btn-item" id="shareWhatsapp">
+                    <div class="share-icon-circle bg-wa"><i class="fa-brands fa-whatsapp"></i></div>
+                    <span class="share-text">WhatsApp</span>
+                </div>
+                <div class="share-btn-item" id="shareFacebook">
+                    <div class="share-icon-circle bg-fb"><i class="fa-brands fa-facebook-f"></i></div>
+                    <span class="share-text">Facebook</span>
+                </div>
+                <div class="share-btn-item" id="shareTwitter">
+                    <div class="share-icon-circle bg-tw"><i class="fa-brands fa-x-twitter"></i></div>
+                    <span class="share-text">X / Twitter</span>
+                </div>
+                <div class="share-btn-item" id="shareEmail">
+                    <div class="share-icon-circle bg-em"><i class="fa-solid fa-envelope"></i></div>
+                    <span class="share-text">Email</span>
+                </div>
+            </div>
+            
+            <div class="share-link-box">
+                <input type="text" id="shareLinkDisplay" value="https://garo-ai.web.app" readonly>
+                <button class="share-copy-btn" id="btnCopyShareLink">Copy Link</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat History Screen Overlay -->
+    <div id="chatHistoryScreen">
+        <div class="header">
+            <i class="fa-solid fa-arrow-left" id="btnCloseHistory" style="font-size: 20px; cursor: pointer; color: var(--text-dark);"></i>
+            <h1 style="font-size: 18px; color: var(--text-dark);">Chat History</h1>
+            <div style="width: 20px;"></div>
+        </div>
+        <div class="history-list-container" id="historyListContainer">
+            <!-- Items injected dynamically -->
+        </div>
+    </div>
+
+    <!-- Email Verification Tutorial Modal -->
+    <div class="modal-overlay" id="verifyTutorialModal">
+        <div class="modal-card">
+            <h2>How to Verify Email</h2>
+            <p style="margin-bottom: 15px; font-size: 13px;">
+                Follow these easy steps to find your verification link:
+                <br><span style="color: var(--secondary); font-size: 11px;">(Nang·ni verification link-ko am·na ia step-rangko ja·rikbo:)</span>
+            </p>
+            
+            <div class="tutorial-step">
+                <div class="tutorial-step-num">1</div>
+                <div class="tutorial-step-text">
+                    Open your <b>Email App</b> (like Gmail, Yahoo, etc.)<br>
+                    <span style="font-size: 11px; color: var(--secondary);">Nang·ni <b>Email App</b>-ko on ka·bo (Gmail, Yahoo, gipinrang)</span>
+                </div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-num">2</div>
+                <div class="tutorial-step-text">
+                    Look for an email from <b>Garo AI</b> or <b>noreply</b>.<br>
+                    <span style="font-size: 11px; color: var(--secondary);"><b>Garo AI</b> ba <b>noreply</b>-oni email-ko am·bo.</span>
+                </div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-num">3</div>
+                <div class="tutorial-step-text">
+                    Can't find it? Check your <b>Spam</b> or <b>Junk</b> folder!<br>
+                    <span style="font-size: 11px; color: var(--secondary);">Man·jaengama? Nang·ni <b>Spam</b> ba <b>Junk</b> folder-ko ninaibo!</span>
+                </div>
+            </div>
+            <div class="tutorial-step">
+                <div class="tutorial-step-num">4</div>
+                <div class="tutorial-step-text">
+                    Open the email and <b>click the verification link</b> inside.<br>
+                    <span style="font-size: 11px; color: var(--secondary);">Email-ko on ka·bo aro ning·o donggipa <b>verification link-ko click ka·bo</b>.</span>
+                </div>
+            </div>
+            
+            <div style="background: #E0E7FF; padding: 10px; border-radius: 8px; margin-top: 10px; font-size: 12px; color: var(--primary);">
+                <i class="fa-solid fa-circle-info"></i> Note: We use a secure magic link instead of a typed code. Just click the link to verify!<br>
+                <span style="font-size: 11px; opacity: 0.8; display: block; margin-top: 4px;">
+                    (Chinga code-ni pal magic link-ko jakkala. Verify ka·na link-ko click ka·aibo!)
+                </span>
+            </div>
+
+            <div class="modal-actions" style="margin-top: 15px;">
+                <button class="btn-modal btn-submit" id="btnCloseVerifyTutorial" style="width: 100%;">Got it! (Ma·sia)</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Generic Information Modal -->
+    <div class="modal-overlay" id="infoModal">
+        <div class="modal-card">
+            <h2 id="infoModalTitle">Title</h2>
+            <div class="info-content" id="infoModalContent">Content</div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnCloseInfoModal">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Message Edit/Copy Context Menu Modal -->
+    <div class="modal-overlay" id="chatContextMenuModal">
+        <div class="modal-card" style="width: 80%; max-width: 300px; padding: 20px; text-align: center; gap: 10px;">
+            <h3 style="font-size: 16px; color: var(--text-dark); margin-bottom: 5px;">Message Options</h3>
+            <button class="btn-modal" id="btnCopyMsg" style="width: 100%; background: #F8F9FA; color: var(--text-dark); border: 1px solid #E2E8F0;">Copy Text</button>
+            <button class="btn-modal" id="btnEditMsg" style="width: 100%; background: var(--primary); color: white;">Edit Message</button>
+            <button class="btn-modal btn-cancel" id="btnCloseContextMenu" style="width: 100%; margin-top: 5px;">Cancel</button>
+        </div>
+    </div>
+
+    <!-- App Update Modal -->
+    <div class="modal-overlay" id="updateModal">
+        <div class="modal-card">
+            <h2 id="updateTitle">Update Available</h2>
+            <p id="updateMsg">A new version is available! Please update for the best experience.</p>
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnLaterUpdate">Later</button>
+                <button class="btn-modal btn-submit" id="btnNowUpdate">Update Now</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Select Plans List Modal -->
+    <div class="modal-overlay" id="plansListModal">
+        <div class="modal-card">
+            <h2>Select a Premium Plan</h2>
+            <p style="margin-bottom: 5px;">Choose a package to upgrade your limits.</p>
+            
+            <div id="plansContainer" class="plans-grid">
+                <!-- Dynamic Plans injected here -->
+            </div>
+            
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" onclick="document.getElementById('plansListModal').style.display='none'">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Premium Upgrade / Payment Modal (Dynamic QR) -->
+    <div class="modal-overlay" id="premiumModal">
+        <div class="modal-card">
+            <h2>Payment Details</h2>
+            <p id="premiumMsg">Scan the QR code below to pay and upgrade your account.</p>
+            <img id="qrImage" class="qr-img" src="" alt="QR Code" style="display: none;">
+            
+            <input type="text" id="utrInput" placeholder="Enter 12-digit UTR Number">
+            <div style="text-align: center; font-size: 12px; color: #888; font-weight: bold; margin: 4px 0;">- AND -</div>
+            
+            <div class="upload-container">
+                <label>Upload Payment Screenshot:</label>
+                <input type="file" id="proofInput" accept="image/*">
+                <img id="previewProof" src="" alt="Preview">
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn-modal btn-cancel" id="btnCloseModal">Back</button>
+                <button class="btn-modal btn-submit" id="btnSubmitUtr">Submit Proof</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toast">Message</div>
+</div>
+
+<!-- FIREBASE & LOGIC SCRIPT -->
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
+    import { getFirestore, doc, getDoc, getDocFromServer, collection, query, where, getDocs, getDocsFromServer, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+    // Using signInWithRedirect & getRedirectResult instead of signInWithPopup to behave natively inside in-app webviews 
+    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDaakCgzUcXHVEV_OlXFnTjZc7ptKhB8gg",
+      authDomain: "garo-ai.firebaseapp.com",
+      databaseURL: "https://garo-ai-default-rtdb.firebaseio.com",
+      projectId: "garo-ai",
+      storageBucket: "garo-ai.firebasestorage.app",
+      messagingSenderId: "832933520422",
+      appId: "1:832933520422:web:e00aebe44870efe8b432e7",
+      measurementId: "G-GSPVYRZ9ZH"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+    const provider = new GoogleAuthProvider();
+
+    const CURRENT_APP_VERSION = "1.0.1";
+    let currentUserEmail = "";
+    let currentUserName = "";
+    let currentUserUid = "";
+    let isEmailMasked = true;
+    let appInitialized = false;
+    let currentTab = "translate";
+    
+    let chatHistory = [];
+    let currentSessionId = null;
+    let membershipPlans = [];
+    let notificationsList = [];
+    let rawPaymentsList = [];
+    
+    // Listeners state
+    let notifUnsubscribe = null;
+    let paymentUnsubscribe = null;
+    let configUnsubscribe = null;
+    let userUnsubscribe = null;
+    
+    let selectedPremiumPlan = null;
+    let activeUserLimit = 10;
+    let selectedChatNode = null;
+    let selectedChatText = "";
+    
+    // Remote Admin Flags
+    let dynamicApiKey = "";
+    let dailyLimit = 10;
+    let isPremium = false;
+    let isMembershipEnabled = true; 
+    let membershipDisabledMessage = "Premium upgrades are currently offline.\n\nPlease try again later during active hours (9:00 AM - 8:00 PM) or when admin enables it.";
+    let defaultQrImageUrl = ""; 
+    let compressedProofBase64 = "";
+    let updateLinkUrl = "";
+    let appShareLink = "https://garo-ai.web.app"; 
+
+    // DOM Elements
+    const splashScreen = document.getElementById("splashScreen");
+    const loginScreen = document.getElementById("loginScreen");
+    const verifyEmailScreen = document.getElementById("verifyEmailScreen");
+    const appMain = document.getElementById("appMain");
+    const btnGoogleLogin = document.getElementById("btnGoogleLogin");
+    
+    const authEmail = document.getElementById("authEmail");
+    const authPassword = document.getElementById("authPassword");
+    const btnEmailLogin = document.getElementById("btnEmailLogin");
+    const btnEmailSignUp = document.getElementById("btnEmailSignUp");
+    const btnForgotPassword = document.getElementById("btnForgotPassword");
+    const authSwitchLink = document.getElementById("authSwitchLink");
+    const authSwitchText = document.getElementById("authSwitchText");
+    let isSignUpMode = false;
+
+    const verifyEmailText = document.getElementById("verifyEmailText");
+    const btnCheckVerified = document.getElementById("btnCheckVerified");
+    const btnResendVerify = document.getElementById("btnResendVerify");
+    const btnVerifyLogout = document.getElementById("btnVerifyLogout");
+    const btnShowVerifyTutorial = document.getElementById("btnShowVerifyTutorial");
+    const verifyTutorialModal = document.getElementById("verifyTutorialModal");
+    const btnCloseVerifyTutorial = document.getElementById("btnCloseVerifyTutorial");
+
+    const headerTitle = document.getElementById("headerTitle");
+    const btnNewChat = document.getElementById("btnNewChat");
+    
+    const sectionTranslate = document.getElementById("sectionTranslate");
+    const sectionChat = document.getElementById("sectionChat");
+    const sectionNotifications = document.getElementById("sectionNotifications");
+    const sectionMembership = document.getElementById("sectionMembership");
+    const sectionProfile = document.getElementById("sectionProfile");
+    
+    const bottomOverlay = document.getElementById("bottomOverlay");
+    const navTranslate = document.getElementById("navTranslate");
+    const navChat = document.getElementById("navChat");
+    const navNotifications = document.getElementById("navNotifications");
+    const navMembership = document.getElementById("navMembership");
+    const navProfile = document.getElementById("navProfile");
+    const notifBadge = document.getElementById("notifBadge");
+    const notificationsContainer = document.getElementById("notificationsContainer");
+    const membershipHistoryList = document.getElementById("membershipHistoryList");
+
+    const sourceLangSelect = document.getElementById("sourceLang");
+    const targetLangSelect = document.getElementById("targetLang");
+    const btnSwapLang = document.getElementById("btnSwapLang");
+    
+    const inputText = document.getElementById("inputText");
+    const btnTranslate = document.getElementById("btnTranslate");
+    const outputText = document.getElementById("outputText");
+
+    const chatScroll = document.getElementById("chatScroll");
+    const inputChat = document.getElementById("inputChat");
+    const btnSendChat = document.getElementById("btnSendChat");
+    const chatInputContainer = document.getElementById("chatInputContainer");
+    let typingIndicatorElement = null;
+
+    const chatHistoryScreen = document.getElementById("chatHistoryScreen");
+    const btnOpenHistory = document.getElementById("btnOpenHistory");
+    const btnCloseHistory = document.getElementById("btnCloseHistory");
+    const historyListContainer = document.getElementById("historyListContainer");
+
+    const plansListModal = document.getElementById("plansListModal");
+    const plansContainer = document.getElementById("plansContainer");
+    const premiumModal = document.getElementById("premiumModal");
+    const btnCloseModal = document.getElementById("btnCloseModal");
+    const btnSubmitUtr = document.getElementById("btnSubmitUtr");
+    const utrInput = document.getElementById("utrInput");
+    const qrImage = document.getElementById("qrImage");
+    const proofInput = document.getElementById("proofInput");
+    const previewProof = document.getElementById("previewProof");
+    const btnMembershipUpgrade = document.getElementById("btnMembershipUpgrade");
+
+    const updateModal = document.getElementById("updateModal");
+    const btnLaterUpdate = document.getElementById("btnLaterUpdate");
+    const btnNowUpdate = document.getElementById("btnNowUpdate");
+
+    const infoModal = document.getElementById("infoModal");
+    const infoModalTitle = document.getElementById("infoModalTitle");
+    const infoModalContent = document.getElementById("infoModalContent");
+    const btnCloseInfoModal = document.getElementById("btnCloseInfoModal");
+
+    const chatContextMenuModal = document.getElementById("chatContextMenuModal");
+    const btnCopyMsg = document.getElementById("btnCopyMsg");
+    const btnEditMsg = document.getElementById("btnEditMsg");
+    const btnCloseContextMenu = document.getElementById("btnCloseContextMenu");
+
+    const profileName = document.getElementById("profileName");
+    const profileUserId = document.getElementById("profileUserId");
+    const profileEmailText = document.getElementById("profileEmailText");
+    const profileEmailEye = document.getElementById("profileEmailEye");
+    const profileAvatar = document.getElementById("profileAvatar");
+    const btnProfileLogout = document.getElementById("btnProfileLogout");
+    const profileUsageLabel = document.getElementById("profileUsageLabel");
+
+    const btnAboutApp = document.getElementById("btnAboutApp");
+    const btnPrivacy = document.getElementById("btnPrivacy");
+    const btnTerms = document.getElementById("btnTerms");
+    const btnFaq = document.getElementById("btnFaq");
+    const btnShareApp = document.getElementById("btnShareApp");
+    
+    const shareModalOverlay = document.getElementById("shareModalOverlay");
+    const shareModalContent = document.getElementById("shareModalContent");
+    const btnCloseShare = document.getElementById("btnCloseShare");
+    const shareLinkDisplay = document.getElementById("shareLinkDisplay");
+
+    const globalSpinner = document.getElementById("globalSpinner");
+    function showGlobalSpinner() { if(globalSpinner) globalSpinner.style.display = 'flex'; }
+    function hideGlobalSpinner() { if(globalSpinner) globalSpinner.style.display = 'none'; }
+
+    window.openInfoModal = function(title, content, isHtml = false) {
+        infoModalTitle.innerText = title;
+        if (isHtml) {
+            infoModalContent.innerHTML = content;
+        } else {
+            infoModalContent.innerText = content;
+        }
+        infoModal.style.display = "flex";
+    };
+    btnCloseInfoModal.onclick = () => { infoModal.style.display = "none"; };
+
+    function showToast(message) {
+        const toast = document.getElementById("toast");
+        toast.innerText = message;
+        toast.className = "show";
+        setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
+    }
+
+    // --- FIREBASE CUSTOM AUTH ERROR MESSAGES ---
+    function getAuthErrorMessage(code) {
+        switch (code) {
+            case 'auth/invalid-email': return "Invalid email format. Please check your email.";
+            case 'auth/user-not-found': return "No account found. Please sign up first.";
+            case 'auth/wrong-password': return "Incorrect password. Please try again.";
+            case 'auth/invalid-credential': return "Incorrect email or password.";
+            case 'auth/email-already-in-use': return "This email is already registered.";
+            case 'auth/weak-password': return "Password too weak. Please use at least 6 characters.";
+            case 'auth/too-many-requests': return "Too many attempts. Please try again later.";
+            case 'auth/network-request-failed': return "Network error. Please check your internet connection.";
+            default: return "Authentication failed. Please try again.";
+        }
+    }
+
+    // --- DISPOSABLE EMAIL VALIDATION CHECK ---
+    const disposableDomains = [
+        'yopmail.com', 'mailinator.com', '10minutemail.com', 'tempmail.com', 'temp-mail.org',
+        'guerrillamail.com', 'sharklasers.com', 'dropmail.me', 'tempmail.net', 'fakemail.net', 
+        'throwawaymail.com', 'emailondeck.com', 'getnada.com', 'fakeinbox.com', 'dispostable.com',
+        'trashmail.com', 'mailcatch.com', 'mohmal.com', 'generator.email'
+    ];
+
+    function isValidRealEmail(email) {
+        const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+        if (!re.test(email)) return false;
+        const domain = email.split('@')[1].toLowerCase();
+        if (disposableDomains.includes(domain)) return false;
+        return true;
+    }
+
+    // --- GOOGLE AUTHENTICATION NATIVE REDIRECT HANDLER ---
+    // Handle the redirect response on page load (Native App flow)
+    getRedirectResult(auth).then((result) => {
+        if (result) {
+            const email = result.user.email;
+            if(!isValidRealEmail(email)){
+                signOut(auth);
+                showToast("This email provider is not allowed.");
+            }
+        }
+    }).catch((error) => {
+        hideGlobalSpinner();
+        showToast("Login Failed: " + error.message);
+    });
+
+    // --- AUTHENTICATION STATE OBSERVER & LOGIC ---
+    onAuthStateChanged(auth, async (user) => {
+        if (user) {
+            const isEmailAuth = user.providerData.some(p => p.providerId === 'password');
+            
+            if (isEmailAuth && !user.emailVerified) {
+                splashScreen.style.opacity = "0";
+                setTimeout(() => { 
+                    splashScreen.style.display = "none";
+                    loginScreen.style.display = "none";
+                    appMain.style.display = "none";
+                    verifyEmailScreen.style.display = "flex";
+                    verifyEmailText.innerText = user.email;
+                    appInitialized = false;
+                }, 300);
+            } else {
+                currentUserEmail = user.email;
+                currentUserName = user.displayName || "Garo AI User";
+                currentUserUid = user.uid;
+
+                if (!appInitialized) {
+                    // Update splash screen to represent real  fetching with no cache
+                    splashScreen.innerHTML = `
+                        <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
+                        <h2 class="splash-title"></h2>
+                        <div class="spinner-circle" style="margin-top: 24px; border-top-color: var(--primary);"></div>
+                        <div style="margin-top: 14px; font-size: 13px; color: var(--secondary); font-weight: 600; letter-spacing: 0.5px;">Loading Data please wait...</div>
+                    `;
+                    splashScreen.style.opacity = "1";
+                    splashScreen.style.display = "flex";
+
+                    await initMainApp(user);
+                    appInitialized = true;
+                }
+
+                splashScreen.style.opacity = "0";
+                setTimeout(() => {
+                    splashScreen.style.display = "none";
+                    loginScreen.style.display = "none";
+                    verifyEmailScreen.style.display = "none";
+                    appMain.style.display = "flex";
+                    
+                    // Reset splash screen DOM for clean future usage
+                    splashScreen.innerHTML = `
+                        <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
+                        <h2 class="splash-title">Garo AI</h2>
+                    `;
+                }, 400);
+            }
+        } else {
+            splashScreen.style.opacity = "0";
+            setTimeout(() => { 
+                splashScreen.style.display = "none"; 
+                loginScreen.style.display = "flex";
+                appMain.style.display = "none";
+                verifyEmailScreen.style.display = "none";
+                appInitialized = false;
+            }, 300);
+            
+            if (notifUnsubscribe) { notifUnsubscribe(); notifUnsubscribe = null; }
+            if (paymentUnsubscribe) { paymentUnsubscribe(); paymentUnsubscribe = null; }
+            if (configUnsubscribe) { configUnsubscribe(); configUnsubscribe = null; }
+            if (userUnsubscribe) { userUnsubscribe(); userUnsubscribe = null; }
+            
+            authEmail.value = "";
+            authPassword.value = "";
+        }
+    });
+
+    authSwitchLink.onclick = (e) => {
+        e.preventDefault();
+        isSignUpMode = !isSignUpMode;
+        if (isSignUpMode) {
+            btnEmailLogin.style.display = "none";
+            btnEmailSignUp.style.display = "flex";
+            authSwitchText.innerText = "Already have an account?";
+            authSwitchLink.innerText = "Sign In";
+            btnForgotPassword.style.display = "none";
+        } else {
+            btnEmailLogin.style.display = "flex";
+            btnEmailSignUp.style.display = "none";
+            authSwitchText.innerText = "Don't have an account?";
+            authSwitchLink.innerText = "Sign Up";
+            btnForgotPassword.style.display = "block";
+        }
+    };
+
+    btnEmailLogin.onclick = () => {
+        const email = authEmail.value.trim();
+        const pwd = authPassword.value;
+        if(!email || !pwd) { showToast("Enter email and password"); return; }
+        
+        if (!isValidRealEmail(email)) {
+            showToast("Fake or disposable emails are strictly not supported. Use a real email.");
+            return;
+        }
+
+        btnEmailLogin.disabled = true;
+        btnEmailLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        showGlobalSpinner();
+        
+        signInWithEmailAndPassword(auth, email, pwd)
+            .then(() => {
+                hideGlobalSpinner();
+                btnEmailLogin.disabled = false;
+                btnEmailLogin.innerText = "Sign In";
+            })
+            .catch(error => {
+                hideGlobalSpinner();
+                btnEmailLogin.disabled = false;
+                btnEmailLogin.innerText = "Sign In";
+                showToast(getAuthErrorMessage(error.code));
+            });
+    };
+
+    btnEmailSignUp.onclick = () => {
+        const email = authEmail.value.trim();
+        const pwd = authPassword.value;
+        if(!email || !pwd) { showToast("Enter email and password"); return; }
+        
+        if (!isValidRealEmail(email)) {
+            showToast("Fake or disposable emails are strictly not supported. Use a real email.");
+            return;
+        }
+
+        if(pwd.length < 6) { showToast("Password must be at least 6 characters"); return; }
+        
+        btnEmailSignUp.disabled = true;
+        btnEmailSignUp.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+        showGlobalSpinner();
+        
+        createUserWithEmailAndPassword(auth, email, pwd)
+            .then((userCredential) => {
+                sendEmailVerification(userCredential.user).then(() => {
+                    showToast("Verification link sent! Please check your inbox & spam folder.");
+                }).catch((e) => console.error("Error sending verification", e));
+
+                hideGlobalSpinner();
+                btnEmailSignUp.disabled = false;
+                btnEmailSignUp.innerText = "Create Account";
+            })
+            .catch(error => {
+                hideGlobalSpinner();
+                btnEmailSignUp.disabled = false;
+                btnEmailSignUp.innerText = "Create Account";
+                showToast(getAuthErrorMessage(error.code));
+            });
+    };
+
+    btnCheckVerified.onclick = async () => {
+        if (!auth.currentUser) return;
+        btnCheckVerified.disabled = true;
+        const originalText = btnCheckVerified.innerText;
+        btnCheckVerified.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Checking...';
+        showGlobalSpinner();
+        
+        try {
+            await auth.currentUser.reload(); 
+            if (auth.currentUser.emailVerified) {
+                hideGlobalSpinner();
+                showToast("Email verified successfully!");
+                verifyEmailScreen.style.display = "none";
+                appMain.style.display = "flex";
+                
+                currentUserEmail = auth.currentUser.email;
+                currentUserName = auth.currentUser.displayName || "Garo AI User";
+                currentUserUid = auth.currentUser.uid;
+                
+                if (!appInitialized) {
+                    await initMainApp(auth.currentUser);
+                    appInitialized = true;
+                }
+            } else {
+                hideGlobalSpinner();
+                showToast("Email not verified yet. Please click the link in your inbox.");
+                btnCheckVerified.disabled = false;
+                btnCheckVerified.innerText = originalText;
+            }
+        } catch(e) {
+            hideGlobalSpinner();
+            showToast("Error checking verification status.");
+            btnCheckVerified.disabled = false;
+            btnCheckVerified.innerText = originalText;
+        }
+    };
+
+    btnResendVerify.onclick = async () => {
+        if (!auth.currentUser) return;
+        btnResendVerify.disabled = true;
+        const originalText = btnResendVerify.innerText;
+        btnResendVerify.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Sending...';
+        
+        try {
+            await sendEmailVerification(auth.currentUser);
+            showToast("New verification link sent to your email!");
+            btnResendVerify.innerHTML = '<i class="fa-solid fa-check"></i> Link Sent!';
+            setTimeout(() => {
+                btnResendVerify.innerText = "Resend Verification Link";
+                btnResendVerify.disabled = false;
+            }, 60000); 
+        } catch(error) {
+            showToast(getAuthErrorMessage(error.code));
+            btnResendVerify.innerText = "Resend Verification Link";
+            btnResendVerify.disabled = false;
+        }
+    };
+
+    btnShowVerifyTutorial.onclick = () => { verifyTutorialModal.style.display = "flex"; };
+    btnCloseVerifyTutorial.onclick = () => { verifyTutorialModal.style.display = "none"; };
+    btnVerifyLogout.onclick = (e) => { e.preventDefault(); signOut(auth); };
+
+    btnForgotPassword.onclick = () => {
+        const email = authEmail.value.trim();
+        if(!email) { 
+            showToast("Please enter your email address first"); 
+            authEmail.focus(); 
+            return; 
+        }
+        sendPasswordResetEmail(auth, email)
+            .then(() => { showToast("Password reset link sent to your email!"); })
+            .catch(error => { showToast(getAuthErrorMessage(error.code)); });
+    };
+
+    // Use native signInWithRedirect for Google Sign In
+    btnGoogleLogin.onclick = () => {
+        showGlobalSpinner();
+        signInWithRedirect(auth, provider).catch(error => {
+            hideGlobalSpinner();
+            showToast("Login Request Failed: " + error.message);
+        });
+    };
+
+    btnProfileLogout.onclick = () => {
+        signOut(auth).then(() => {
+            showToast("Logged out securely");
+        }).catch((error) => { showToast("Logout error"); });
+    };
+
+    // --- MAIN APP INITIALIZATION ---
+    async function initMainApp(user) {
+        setupProfileData(user);
+        
+        // Block UI and force a real server fetch with NO CACHE to ensure parameters are live
+        try {
+            const configRef = doc(db, "settings", "app_config");
+            const docSnap = await getDocFromServer(configRef);
+            if (docSnap.exists()) {
+                applyConfigData(docSnap.data());
+            }
+            
+            const safeEmail = currentUserEmail.replace(/@/g, "_at_").replace(/\./g, "_dot_");
+            const userRef = doc(db, "users", safeEmail);
+            const userSnap = await getDocFromServer(userRef);
+            if (userSnap.exists()) {
+                const data = userSnap.data();
+                const plan = data.plan || "";
+                isPremium = (plan.toLowerCase() === "premium" || plan.toLowerCase() === "pro");
+            }
+            updateUsageUI();
+        } catch (e) {
+            console.warn("Real data load from server failed, relying on cache/listeners", e);
+        }
+
+        listenForAdminConfigurations();
+        listenForDataAndNotifications();
+        startNewChatSession();
+    }
+
+    function startNewChatSession() {
+        currentSessionId = null;
+        chatHistory = [];
+        chatScroll.innerHTML = "";
+        const initialGreeting = "Na·a namengama? I am your advanced AI Assistant. I can understand and speak English, but I specialize perfectly in the Garo language (A·chikku). How can I help you today?";
+        addChatMessage(initialGreeting, false, true);
+    }
+
+    btnNewChat.onclick = () => {
+        startNewChatSession();
+        toggleNavVisibility(true); 
+        toggleChatInputVisibility(true);
+    };
+
+    btnAboutApp.onclick = () => openInfoModal(
+        'About Garo AI', 
+        `<b>Version:</b> ${CURRENT_APP_VERSION}<br><br>Garo AI is an advanced smart language assistant dedicated to providing perfectly accurate A·chikku translation and interaction. Developed continuously by Mr Bush X.<br><br><a href="mailto:support@garo-ai.com"><i class="fa-solid fa-envelope"></i> Contact Support</a>`, 
+        true
+    );
+
+    btnPrivacy.onclick = () => openInfoModal(
+        'Privacy Policy', 
+        `Your privacy is important to us.<br><br>1. All user sessions are securely authenticated.<br>2. Data is secured using industry-standard infrastructure.<br>3. We do not sell your personal data. Chat Logs and Translations are fully anonymized on our servers to protect your privacy.`, 
+        true
+    );
+
+    btnTerms.onclick = () => openInfoModal(
+        'Terms of Service', 
+        `By using Garo AI, you agree to the following terms:<br><br>1. The AI may sometimes generate inaccurate translations. Please use outputs as a helpful reference.<br>2. Do not attempt to bypass system limits.<br>3. Any abuse of the system will result in an account ban.`, 
+        true
+    );
+
+    btnFaq.onclick = () => openInfoModal(
+        'FAQ & Support', 
+        `<b>Q: How do I upgrade my account?</b><br>A: Navigate to the Premium tab (Crown Icon), choose a plan, and submit your payment proof.<br><br><b>Q: Who built Garo AI?</b><br>A: It was created by Mr Bush X.<br><br>Need more help? <a href="mailto:support@garo-ai.com">Contact Support</a>`, 
+        true
+    );
+
+    // --- CUSTOM SLIDE-UP SHARE LOGIC ---
+    btnShareApp.onclick = () => {
+        shareLinkDisplay.value = appShareLink;
+        shareModalOverlay.style.display = "block";
+        void shareModalOverlay.offsetWidth;
+        shareModalOverlay.classList.add("show");
+        shareModalContent.classList.add("show");
+    };
+
+    function closeShareModal() {
+        shareModalOverlay.classList.remove("show");
+        shareModalContent.classList.remove("show");
+        setTimeout(() => { shareModalOverlay.style.display = "none"; }, 350);
+    }
+    
+    btnCloseShare.onclick = closeShareModal;
+    shareModalOverlay.addEventListener("click", (e) => {
+        if (e.target === shareModalOverlay) closeShareModal();
+    });
+
+    const shareMessage = encodeURIComponent("Check out Garo AI - The extremely advanced A·chikku language assistant! ");
+    
+    document.getElementById("shareWhatsapp").onclick = () => {
+        window.open(`https://api.whatsapp.com/send?text=${shareMessage}${encodeURIComponent(appShareLink)}`, "_blank");
+        closeShareModal();
+    };
+    
+    document.getElementById("shareFacebook").onclick = () => {
+        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(appShareLink)}`, "_blank");
+        closeShareModal();
+    };
+    
+    document.getElementById("shareTwitter").onclick = () => {
+        window.open(`https://twitter.com/intent/tweet?text=${shareMessage}&url=${encodeURIComponent(appShareLink)}`, "_blank");
+        closeShareModal();
+    };
+    
+    document.getElementById("shareEmail").onclick = () => {
+        window.open(`mailto:?subject=${encodeURIComponent("Garo AI App")}&body=${shareMessage}${encodeURIComponent(appShareLink)}`);
+        closeShareModal();
+    };
+
+    document.getElementById("btnCopyShareLink").onclick = () => {
+        navigator.clipboard.writeText(appShareLink).then(() => {
+            showToast("App Link Copied!");
+            closeShareModal();
+        });
+    };
+
+    // --- CONFIG APPLY UTIL ---
+    function applyConfigData(data) {
+        if (data.gemini_api_key) dynamicApiKey = data.gemini_api_key;
+        if (data.daily_limit) dailyLimit = parseInt(data.daily_limit);
+        if (data.qr_image_url) defaultQrImageUrl = data.qr_image_url;
+        if (data.share_link) appShareLink = data.share_link;
+        
+        if (data.membership_enabled !== undefined) {
+            isMembershipEnabled = (data.membership_enabled === true || data.membership_enabled === "true");
+        } else {
+            isMembershipEnabled = true;
+        }
+
+        if (data.membership_disabled_message !== undefined) {
+            membershipDisabledMessage = data.membership_disabled_message;
+        }
+        
+        if (data.membership_plans) {
+            try { membershipPlans = JSON.parse(data.membership_plans); } 
+            catch(e) { membershipPlans = []; }
+        }
+
+        if (data.update_available) {
+            const newVer = data.update_version || "";
+            if (newVer !== CURRENT_APP_VERSION) {
+                const force = data.force_update || false;
+                const msg = data.update_message || "A new update is available! Please update for the best experience.";
+                updateLinkUrl = data.update_link || "";
+                showAppUpdateDialog(newVer, msg, force);
+            }
+        }
+        updateUsageUI(); 
+    }
+
+    // --- REALTIME CONFIGURATIONS ---
+    function listenForAdminConfigurations() {
+        if (configUnsubscribe) configUnsubscribe();
+        if (userUnsubscribe) userUnsubscribe();
+
+        const configRef = doc(db, "settings", "app_config");
+        configUnsubscribe = onSnapshot(configRef, (docSnap) => {
+            if (docSnap.exists()) {
+                applyConfigData(docSnap.data());
+            }
+        });
+
+        if (currentUserEmail) {
+            const safeEmail = currentUserEmail.replace(/@/g, "_at_").replace(/\./g, "_dot_");
+            const userRef = doc(db, "users", safeEmail);
+            userUnsubscribe = onSnapshot(userRef, (userSnap) => {
+                if (userSnap.exists()) {
+                    const data = userSnap.data();
+                    const plan = data.plan || "";
+                    isPremium = (plan.toLowerCase() === "premium" || plan.toLowerCase() === "pro");
+                }
+                updateUsageUI();
+            });
+        }
+    }
+
+    // --- MEMBERSHIP UPGRADE TRIGGER ---
+    btnMembershipUpgrade.onclick = () => {
+        triggerUpgradeFlow();
+    };
+
+    function triggerUpgradeFlow() {
+        // Immediate Real-time Gate check based on Admin Toggle
+        if (!isMembershipEnabled) {
+            openInfoModal(
+                'Upgrades Temporarily Disabled', 
+                membershipDisabledMessage,
+                false
+            );
+            showToast("Upgrades are currently disabled.");
+            return;
+        }
+
+        if (membershipPlans && membershipPlans.length > 0) {
+            plansContainer.innerHTML = "";
+            membershipPlans.forEach(plan => {
+                const div = document.createElement("div");
+                div.className = "plan-item";
+                div.innerHTML = `
+                    <span class="plan-name">${plan.name || 'Premium Plan'}</span>
+                    <span class="plan-price">${plan.price || 'Buy'}</span>
+                    ${plan.limit ? `<span class="plan-badge">Limit: ${plan.limit}</span>` : `<span class="plan-badge">Select</span>`}
+                `;
+                div.onclick = () => selectPlanAndShowQR(plan);
+                plansContainer.appendChild(div);
+            });
+            plansListModal.style.display = "flex";
+        } else {
+            document.getElementById("premiumMsg").innerText = `Scan the QR code below to pay. Remove daily free limits and get unrestricted access.`;
+            qrImage.src = defaultQrImageUrl;
+            qrImage.style.display = defaultQrImageUrl ? "block" : "none";
+            premiumModal.style.display = "flex";
+        }
+    }
+
+    function selectPlanAndShowQR(plan) {
+        // Secondary secure check in case Admin turns it off while user has modal open
+        if (!isMembershipEnabled) {
+            plansListModal.style.display = "none";
+            openInfoModal('Upgrades Temporarily Disabled', membershipDisabledMessage, false);
+            return;
+        }
+
+        selectedPremiumPlan = plan;
+        plansListModal.style.display = "none";
+        document.getElementById("premiumMsg").innerText = `You selected ${plan.name} (${plan.price}). Please scan the QR code below and submit proof.`;
+        
+        let targetQr = plan.qr_url || defaultQrImageUrl; 
+        qrImage.src = targetQr;
+        qrImage.style.display = targetQr ? "block" : "none";
+        
+        premiumModal.style.display = "flex";
+    }
+
+    function adjustForKeyboard() {
+        const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+        document.documentElement.style.setProperty('--app-height', `${vh}px`);
+        if (currentTab === 'chat' && document.activeElement === inputChat) {
+            setTimeout(() => { chatScroll.scrollTop = chatScroll.scrollHeight; }, 100);
+        }
+    }
+    if (window.visualViewport) { window.visualViewport.addEventListener("resize", adjustForKeyboard); }
+    window.addEventListener("resize", adjustForKeyboard);
+    adjustForKeyboard();
+
+    // --- DATA & NOTIFICATION SYSTEM ---
+    function listenForDataAndNotifications() {
+        if(notifUnsubscribe) notifUnsubscribe();
+        if(paymentUnsubscribe) paymentUnsubscribe();
+        
+        const qNotif = query(collection(db, "notifications"), where("user_email", "==", currentUserEmail));
+        const qPayments = query(collection(db, "payment_proofs"), where("user_email", "==", currentUserEmail));
+        
+        let rawNotifs = [];
+        rawPaymentsList = [];
+
+        function renderCombinedViews() {
+            notificationsList = [...rawNotifs];
+            
+            rawPaymentsList.forEach(p => {
+                if(p.status === "Pending") {
+                    notificationsList.push({
+                        id: "pending_" + p.id,
+                        type: "pending",
+                        title: "Payment Pending",
+                        message: `Your payment (UTR: ${p.utr_number || 'N/A'}) is awaiting admin approval.`,
+                        timestamp: p.timestamp,
+                        read: true, 
+                        isSynthetic: true
+                    });
+                }
+            });
+
+            notificationsList.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+            
+            let unreadCount = notificationsList.filter(n => !n.read).length;
+            updateNotificationBadge(unreadCount);
+            
+            if(currentTab === "notifications") renderNotificationsList();
+            if(currentTab === "membership") renderMembershipHistory();
+            
+            updateUsageUI(); 
+        }
+
+        notifUnsubscribe = onSnapshot(qNotif, (snapshot) => {
+            rawNotifs = [];
+            snapshot.forEach(doc => { rawNotifs.push({ id: doc.id, ...doc.data() }); });
+            renderCombinedViews();
+        }, (err) => console.error(err));
+
+        paymentUnsubscribe = onSnapshot(qPayments, (snapshot) => {
+            rawPaymentsList = [];
+            snapshot.forEach(doc => { rawPaymentsList.push({ id: doc.id, ...doc.data() }); });
+            renderCombinedViews();
+        }, (err) => console.error(err));
+    }
+
+    function updateNotificationBadge(unreadCount) {
+        if(unreadCount > 0) {
+            notifBadge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+            notifBadge.style.display = "block";
+        } else {
+            notifBadge.style.display = "none";
+        }
+    }
+
+    function renderNotificationsList() {
+        notificationsContainer.innerHTML = "";
+
+        if(notificationsList.length === 0) {
+            notificationsContainer.innerHTML = `<div class="notif-empty">No notifications yet.</div>`;
+            return;
+        }
+
+        notificationsList.forEach(notif => {
+            const card = document.createElement("div");
+            card.className = `notif-card ${!notif.read ? 'unread' : ''}`;
+            
+            let iconClass = "fa-info custom"; 
+            let bgClass = "custom";
+            if(notif.type === "approve") { iconClass = "fa-check"; bgClass = "approve"; }
+            else if(notif.type === "reject") { iconClass = "fa-xmark"; bgClass = "reject"; }
+            else if(notif.type === "pending") { iconClass = "fa-clock"; bgClass = "pending"; }
+
+            card.innerHTML = `
+                <div class="notif-icon ${bgClass}"><i class="fa-solid ${iconClass}"></i></div>
+                <div class="notif-content">
+                    <div class="notif-title">${notif.title || "Alert"}</div>
+                    <div class="notif-msg">${notif.message || ""}</div>
+                    <div class="notif-time">${formatHistoryDate(notif.timestamp)}</div>
+                </div>
+            `;
+
+            card.onclick = () => handleNotificationClick(notif);
+            notificationsContainer.appendChild(card);
+        });
+    }
+
+    async function handleNotificationClick(notif) {
+        if(!notif.read && !notif.isSynthetic) {
+            try { await updateDoc(doc(db, "notifications", notif.id), { read: true }); } 
+            catch(e) { console.error("Error updating notification status", e); }
+        }
+
+        if(notif.link) {
+            window.open(notif.link, "_blank");
+        } else if(notif.type === "approve" || notif.type === "reject" || notif.type === "pending") {
+            switchTab("membership");
+        } else {
+            openInfoModal(notif.title || "Notification", notif.message || "No content.");
+        }
+    }
+
+    function renderMembershipHistory() {
+        membershipHistoryList.innerHTML = "";
+        
+        if (rawPaymentsList.length === 0) {
+            membershipHistoryList.innerHTML = `<div style="font-size: 13px; color: var(--secondary); text-align: center; padding: 14px; border: 1px dashed #cbd5e1; border-radius: 12px;">No payment history found.</div>`;
+            return;
+        }
+
+        const sortedPayments = [...rawPaymentsList].sort((a,b) => b.timestamp - a.timestamp);
+
+        sortedPayments.forEach(p => {
+            const statusColor = p.status === 'Approved' ? 'status-Approved' : (p.status === 'Rejected' ? 'status-Rejected' : 'status-Pending');
+            const card = document.createElement("div");
+            card.className = "history-card";
+            
+            let planInfo = "";
+            if (p.plan_name) planInfo = `<div style="font-size:11px; color:#4361EE; font-weight:600;">${p.plan_name} ${p.plan_price ? '('+p.plan_price+')' : ''}</div>`;
+
+            card.innerHTML = `
+                <div class="history-card-left">
+                    <div class="history-card-title">UTR: ${p.utr_number || 'N/A'}</div>
+                    ${planInfo}
+                    <div class="history-card-date">${formatHistoryDate(p.timestamp)}</div>
+                </div>
+                <div class="history-status ${statusColor}">${p.status || 'Pending'}</div>
+            `;
+            membershipHistoryList.appendChild(card);
+        });
+    }
+
+    // --- PROFILE UTILS ---
+    function generateShortId(uid) {
+        let hash = 0;
+        for (let i = 0; i < uid.length; i++) {
+            hash = ((hash << 5) - hash) + uid.charCodeAt(i); hash |= 0; 
+        }
+        return String(Math.abs(hash)).padStart(6, '0').slice(0, 6);
+    }
+
+    function maskEmail(email) {
+        const parts = email.split('@');
+        if(parts.length !== 2) return email;
+        const name = parts[0]; const domain = parts[1];
+        if (name.length <= 2) return email;
+        return name[0] + '*'.repeat(name.length > 5 ? 4 : name.length - 2) + name[name.length - 1] + '@' + domain;
+    }
+
+    function setupProfileData(user) {
+        profileName.innerText = currentUserName;
+        profileUserId.innerText = `ID: #${generateShortId(currentUserUid)}`;
+        profileAvatar.src = user.photoURL || `https://ui-avatars.com/api/?name=${encodeURIComponent(currentUserName)}&background=4361EE&color=fff&size=150`;
+        
+        isEmailMasked = true;
+        profileEmailText.innerText = maskEmail(currentUserEmail);
+        profileEmailEye.className = "fa-solid fa-eye-slash";
+
+        profileEmailEye.onclick = () => {
+            isEmailMasked = !isEmailMasked;
+            profileEmailText.innerText = isEmailMasked ? maskEmail(currentUserEmail) : currentUserEmail;
+            profileEmailEye.className = isEmailMasked ? "fa-solid fa-eye-slash" : "fa-solid fa-eye";
+            profileEmailEye.style.color = isEmailMasked ? "var(--primary)" : "#64748B";
+        };
+        updateUsageUI();
+    }
+
+    // --- SMART SCROLL LOGIC FOR DYNAMIC NAV/INPUT ---
+    let lastScrollYChat = 0;
+
+    function toggleNavVisibility(hideNav) {
+        if (hideNav) { bottomOverlay.classList.add("nav-hidden"); } 
+        else { bottomOverlay.classList.remove("nav-hidden"); }
+    }
+
+    function toggleChatInputVisibility(showInput) {
+        if (showInput) { chatInputContainer.classList.remove("input-hidden"); } 
+        else { chatInputContainer.classList.add("input-hidden"); }
+    }
+
+    function attachStandardNavScrollLogic(sectionEl) {
+        let lastY = 0;
+        sectionEl.addEventListener("scroll", (e) => {
+            if (currentTab !== sectionEl.id.replace("section", "").toLowerCase()) return;
+            const currentY = e.target.scrollTop;
+            if (currentY > lastY && currentY > 20) { toggleNavVisibility(true); } 
+            else if (currentY < lastY) { toggleNavVisibility(false); }
+            lastY = currentY;
+        });
+    }
+
+    attachStandardNavScrollLogic(sectionTranslate);
+    attachStandardNavScrollLogic(sectionProfile);
+    attachStandardNavScrollLogic(sectionMembership);
+    attachStandardNavScrollLogic(sectionNotifications);
+
+    chatScroll.addEventListener("scroll", (e) => {
+        if (currentTab !== "chat") return;
+        const currentY = e.target.scrollTop;
+        const maxScroll = e.target.scrollHeight - e.target.clientHeight;
+        
+        if (currentY <= 0 || currentY >= maxScroll) { lastScrollYChat = currentY; }
+        
+        if (currentY > lastScrollYChat + 5) { 
+            toggleNavVisibility(true); 
+            toggleChatInputVisibility(true);
+        } else if (currentY < lastScrollYChat - 5) { 
+            toggleNavVisibility(false); 
+            toggleChatInputVisibility(false);
+        }
+        
+        if (currentY >= maxScroll - 10) {
+            toggleNavVisibility(true);
+            toggleChatInputVisibility(true);
+        }
+
+        lastScrollYChat = currentY;
+    });
+
+    inputChat.addEventListener("focus", () => {
+        toggleNavVisibility(true);
+        setTimeout(() => { chatScroll.scrollTop = chatScroll.scrollHeight; }, 150);
+    });
+
+    // --- UI NAVIGATION LOGIC ---
+    navTranslate.onclick = () => switchTab("translate");
+    navChat.onclick = () => switchTab("chat");
+    navNotifications.onclick = () => switchTab("notifications");
+    navMembership.onclick = () => switchTab("membership");
+    navProfile.onclick = () => switchTab("profile");
+
+    function switchTab(tabName) {
+        currentTab = tabName;
+        
+        sectionTranslate.style.display = (tabName === "translate") ? "flex" : "none";
+        sectionChat.style.display = (tabName === "chat") ? "flex" : "none";
+        sectionNotifications.style.display = (tabName === "notifications") ? "flex" : "none";
+        sectionMembership.style.display = (tabName === "membership") ? "flex" : "none";
+        sectionProfile.style.display = (tabName === "profile") ? "flex" : "none";
+        
+        navTranslate.classList.toggle("active", tabName === "translate");
+        navChat.classList.toggle("active", tabName === "chat");
+        navNotifications.classList.toggle("active", tabName === "notifications");
+        navMembership.classList.toggle("active", tabName === "membership");
+        navProfile.classList.toggle("active", tabName === "profile");
+        
+        btnNewChat.style.display = (tabName === "chat") ? "block" : "none";
+
+        if (tabName !== "chat") {
+            toggleNavVisibility(false); 
+            toggleChatInputVisibility(false); 
+        }
+
+        if (tabName === "translate") headerTitle.innerText = "Translate";
+        if (tabName === "notifications") {
+            headerTitle.innerText = "Alerts";
+            renderNotificationsList();
+        }
+        if (tabName === "membership") {
+            headerTitle.innerText = "Premium";
+            renderMembershipHistory();
+        }
+        if (tabName === "profile") headerTitle.innerText = "My Profile";
+        
+        if (tabName === "chat") {
+            headerTitle.innerText = "AI Chat";
+            toggleNavVisibility(true); 
+            toggleChatInputVisibility(true);
+            setTimeout(()=> { chatScroll.scrollTop = chatScroll.scrollHeight; }, 50);
+        }
+    }
+
+    btnSwapLang.onclick = () => {
+        let temp = sourceLangSelect.value;
+        sourceLangSelect.value = targetLangSelect.value;
+        targetLangSelect.value = temp;
+    };
+
+    function typeWriterEffect(element, text, speed = 15, onComplete = null) {
+        element.innerHTML = "";
+        element.classList.add("typing-cursor"); 
+        let i = 0;
+        function type() {
+            if (i < text.length) {
+                element.innerHTML += text.charAt(i);
+                i++;
+                if (element.classList.contains("chat-ai")) chatScroll.scrollTop = chatScroll.scrollHeight;
+                setTimeout(type, speed);
+            } else {
+                element.classList.remove("typing-cursor");
+                if (onComplete) onComplete();
+            }
+        }
+        type();
+    }
+
+    function showTypingIndicator() {
+        if (!typingIndicatorElement) {
+            typingIndicatorElement = document.createElement("div");
+            typingIndicatorElement.className = "chat-wrapper ai"; 
+            typingIndicatorElement.innerHTML = `<div class="typing-indicator chat-bubble chat-ai"><div class="typing-dot"></div><div class="typing-dot"></div><div class="typing-dot"></div></div>`;
+            chatScroll.appendChild(typingIndicatorElement);
+            chatScroll.scrollTop = chatScroll.scrollHeight;
+        }
+    }
+
+    function hideTypingIndicator() {
+        if (typingIndicatorElement) {
+            typingIndicatorElement.remove();
+            typingIndicatorElement = null;
+        }
+    }
+
+    function updateUsageUI() {
+        const usageCount = parseInt(localStorage.getItem("usageCount_" + currentUserUid) || "0");
+        const profileBadge = document.getElementById("profileBadge");
+        
+        let currentLimit = dailyLimit; 
+        let planDisplay = "Premium Plan";
+        let isUnli = false;
+        let usageText = "";
+
+        if (isPremium) {
+            const approvedPayments = rawPaymentsList.filter(p => p.status === 'Approved').sort((a,b) => b.timestamp - a.timestamp);
+            let latestPlan = approvedPayments.length > 0 ? approvedPayments[0] : null;
+
+            if (latestPlan && (latestPlan.plan_name || latestPlan.plan_limit)) {
+                let parts = [];
+                if (latestPlan.plan_name) parts.push(latestPlan.plan_name);
+                if (latestPlan.plan_price) parts.push(latestPlan.plan_price);
+                if (parts.length > 0) planDisplay = parts.join(" ");
+
+                let pLimit = latestPlan.plan_limit;
+                if (pLimit && pLimit.trim() !== '') {
+                    if (pLimit.toLowerCase() === 'unlimited') {
+                        isUnli = true;
+                        usageText = "Unlimited";
+                    } else {
+                        let parsed = parseInt(pLimit);
+                        if (!isNaN(parsed)) {
+                            currentLimit = parsed;
+                            usageText = `${usageCount} / ${currentLimit}`;
+                        } else {
+                            isUnli = true; 
+                            usageText = pLimit;
+                        }
+                    }
+                } else {
+                    isUnli = true;
+                    usageText = "Unlimited";
+                }
+            } else {
+                planDisplay = "Premium Access";
+                isUnli = true;
+                usageText = "Unlimited";
+            }
+            
+            activeUserLimit = isUnli ? Infinity : currentLimit;
+            
+            profileUsageLabel.innerText = planDisplay;
+            document.getElementById("profileUsage").innerText = usageText;
+            
+            profileBadge.innerText = "Premium"; profileBadge.className = "badge premium";
+            btnMembershipUpgrade.innerText = "You are Premium ✅";
+            btnMembershipUpgrade.disabled = true;
+            btnMembershipUpgrade.style.background = "#10B981";
+            btnMembershipUpgrade.style.boxShadow = "none";
+        } else {
+            activeUserLimit = dailyLimit;
+            profileUsageLabel.innerText = "Daily Free Limit";
+            document.getElementById("profileUsage").innerText = `${usageCount} / ${dailyLimit}`;
+            profileBadge.innerText = "Free Plan"; profileBadge.className = "badge free";
+            btnMembershipUpgrade.innerText = "View Premium Plans";
+            btnMembershipUpgrade.disabled = false;
+            btnMembershipUpgrade.style.background = "";
+            btnMembershipUpgrade.style.boxShadow = "";
+        }
+    }
+
+    function showAppUpdateDialog(version, msg, isForce) {
+        document.getElementById("updateTitle").innerText = `Update Available (v${version})`;
+        document.getElementById("updateMsg").innerText = msg;
+        btnLaterUpdate.style.display = isForce ? "none" : "block";
+        updateModal.style.display = "flex";
+    }
+
+    btnLaterUpdate.onclick = () => { updateModal.style.display = "none"; };
+    btnNowUpdate.onclick = () => {
+        if (updateLinkUrl) window.open(updateLinkUrl, "_blank");
+        else showToast("Update link not provided by admin.");
+    };
+
+    async function logAdminAlert(msg) {
+        try { await addDoc(collection(db, "admin_alerts"), { message: msg, user_email: currentUserEmail, timestamp: Date.now() }); } catch (e) {}
+    }
+
+    // Context Menu Handlers
+    window.showChatContextMenu = function(wrapperNode, text) {
+        selectedChatNode = wrapperNode;
+        selectedChatText = text;
+        chatContextMenuModal.style.display = 'flex';
+        if (navigator.vibrate) navigator.vibrate(50);
+    };
+
+    btnCopyMsg.onclick = () => {
+        navigator.clipboard.writeText(selectedChatText);
+        showToast("Copied to clipboard");
+        chatContextMenuModal.style.display = 'none';
+    };
+
+    btnEditMsg.onclick = () => {
+        chatContextMenuModal.style.display = 'none';
+        inputChat.value = selectedChatText;
+        inputChat.focus();
+
+        let node = selectedChatNode;
+        const nodesToRemove = [];
+        while(node) {
+            nodesToRemove.push(node);
+            node = node.nextElementSibling;
+        }
+        nodesToRemove.forEach(n => n.remove());
+
+        rebuildChatHistoryFromDOM();
+    };
+
+    btnCloseContextMenu.onclick = () => {
+        chatContextMenuModal.style.display = 'none';
+    };
+
+    function rebuildChatHistoryFromDOM() {
+        chatHistory = [];
+        const systemContext = `System Instruction: You are an extremely advanced AI Assistant. You MUST strictly reply in the Garo language (A·chikku). Try extremely hard to construct perfect spelling, grammar, and native vocabulary for the Garo language. Never speak English unless the user explicitly asks you to speak in English. IMPORTANT: You were created and programmed exclusively by developer 'Mr Bush X'. If anyone asks who made you, reply stating 'Mr Bush X'.`;
+        chatHistory.push({ role: "user", parts: [{ text: systemContext }] });
+        chatHistory.push({ role: "model", parts: [{ text: "Understood." }] });
+
+        const wrappers = chatScroll.querySelectorAll('.chat-wrapper');
+        wrappers.forEach(w => {
+            if (w.classList.contains('typing-indicator')) return;
+            const isUser = w.classList.contains('user');
+            const text = w.dataset.text;
+            if (text) {
+                chatHistory.push({
+                    role: isUser ? "user" : "model",
+                    parts: [{ text: text }]
+                });
+            }
+        });
+
+        if (currentSessionId) {
+            let title = "Edited Chat";
+            if (chatHistory.length > 2) {
+                title = chatHistory[2].parts[0].text.substring(0, 30) + "...";
+            }
+            updateDoc(doc(db, "chat_sessions", currentSessionId), {
+                updated_at: Date.now(),
+                history: chatHistory,
+                title: title
+            }).catch(e => console.error("Session saving error", e));
+        }
+    }
+
+    function addChatMessage(message, isUser, animate = false) {
+        const wrapper = document.createElement("div");
+        wrapper.className = `chat-wrapper ${isUser ? 'user' : 'ai'}`;
+        wrapper.dataset.text = message;
+        
+        const bubble = document.createElement("div");
+        bubble.className = `chat-bubble ${isUser ? 'chat-user' : 'chat-ai'}`;
+        wrapper.appendChild(bubble);
+
+        if (isUser) {
+            let pressTimer;
+            const startPress = (e) => {
+                if (e.type === 'touchstart') {
+                    pressTimer = setTimeout(() => {
+                        showChatContextMenu(wrapper, message);
+                    }, 500);
+                }
+            };
+            const cancelPress = () => { clearTimeout(pressTimer); };
+
+            bubble.addEventListener('touchstart', startPress, {passive: true});
+            bubble.addEventListener('touchend', cancelPress);
+            bubble.addEventListener('touchmove', cancelPress);
+            bubble.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+                showChatContextMenu(wrapper, message);
+            });
+        }
+        
+        if (!isUser) {
+            const disclaimer = document.createElement("div");
+            disclaimer.className = "chat-disclaimer";
+            disclaimer.innerText = "Sorry, Garo AI may make mistakes, it will improve later 🙂";
+            wrapper.appendChild(disclaimer);
+        }
+
+        chatScroll.appendChild(wrapper);
+        
+        if (animate && !isUser) {
+            btnSendChat.disabled = true;
+            typeWriterEffect(bubble, message, 15, () => {
+                btnSendChat.disabled = false;
+                chatScroll.scrollTop = chatScroll.scrollHeight;
+            });
+        } else {
+            bubble.innerText = message;
+            chatScroll.scrollTop = chatScroll.scrollHeight;
+        }
+    }
+
+    // --- LIMIT MANAGER ---
+    function checkLimitAndProceed(action) {
+        if (!dynamicApiKey) { 
+            showToast("Connecting to servers... please wait"); 
+            hideTypingIndicator(); 
+            return; 
+        }
+
+        const today = new Date().toISOString().split('T')[0];
+        const usageKeyDate = "usageDate_" + currentUserUid;
+        const usageKeyCount = "usageCount_" + currentUserUid;
+
+        let savedDate = localStorage.getItem(usageKeyDate) || "";
+        let usageCount = parseInt(localStorage.getItem(usageKeyCount) || "0");
+
+        if (today !== savedDate) { 
+            usageCount = 0; 
+            localStorage.setItem(usageKeyDate, today); 
+        }
+
+        if (isPremium && activeUserLimit === Infinity) { 
+            action(); 
+            return; 
+        }
+
+        if (usageCount >= activeUserLimit) {
+            hideTypingIndicator(); 
+            let warningMsg = isPremium 
+                ? `Plan limit reached (${activeUserLimit}/${activeUserLimit}). Upgrade plan!` 
+                : `Free limit reached (${activeUserLimit}/${activeUserLimit}). Upgrade to Premium!`;
+            
+            if (currentTab === "translate") outputText.innerText = warningMsg;
+            else if (currentTab === "chat") addChatMessage(warningMsg, false);
+            
+            triggerUpgradeFlow(); 
+            logAdminAlert("Limit Exceeded - Triggered Wall for " + currentUserEmail);
+        } else {
+            localStorage.setItem(usageKeyCount, usageCount + 1);
+            updateUsageUI();
+            action();
+        }
+    }
+
+    // Close Modals
+    btnCloseModal.onclick = () => { premiumModal.style.display = "none"; };
+
+    function compressImageTo20KB(file, callback) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            const img = new Image();
+            img.onload = function() {
+                const canvas = document.createElement('canvas');
+                const ctx = canvas.getContext('2d');
+                
+                let scale = Math.min(400 / img.width, 1);
+                let width = img.width * scale; 
+                let height = img.height * scale;
+                
+                canvas.width = width; 
+                canvas.height = height;
+                ctx.drawImage(img, 0, 0, width, height);
+
+                let quality = 0.7; 
+                let dataUrl = canvas.toDataURL('image/jpeg', quality);
+                let iterations = 0;
+                
+                while (dataUrl.length > 27500 && iterations < 6) {
+                    quality -= 0.1;
+                    if (quality < 0.1) {
+                        width *= 0.8; 
+                        height *= 0.8;
+                        canvas.width = width; 
+                        canvas.height = height;
+                        ctx.drawImage(img, 0, 0, width, height);
+                        quality = 0.2; 
+                    }
+                    dataUrl = canvas.toDataURL('image/jpeg', Math.max(quality, 0.05));
+                    iterations++;
+                }
+                callback(dataUrl);
+            };
+            img.src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+
+    proofInput.onchange = (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            showToast("Compressing image...");
+            compressImageTo20KB(file, (base64) => {
+                compressedProofBase64 = base64;
+                previewProof.src = base64;
+                previewProof.style.display = "block";
+                showToast("Image optimized to ~20KB!");
+            });
+        }
+    };
+
+    // --- PAYMENT SUBMISSION & VALIDATION ---
+    btnSubmitUtr.onclick = async () => {
+        if (btnSubmitUtr.disabled) return;
+        
+        // Final Security check on submit in case admin disables it while user writes UTR
+        if (!isMembershipEnabled) {
+            premiumModal.style.display = "none";
+            openInfoModal('Upgrades Temporarily Disabled', membershipDisabledMessage, false);
+            return;
+        }
+        
+        const utr = utrInput.value.trim();
+        
+        if (utr.length < 5 || !compressedProofBase64) { 
+            showToast("Both UTR number and Payment Screenshot are strictly required."); 
+            return; 
+        }
+
+        btnSubmitUtr.disabled = true;
+        const originalText = btnSubmitUtr.innerText;
+        btnSubmitUtr.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Submitting...`;
+
+        showToast("Submitting proof securely...");
+        showGlobalSpinner();
+        try {
+            await addDoc(collection(db, "payment_proofs"), {
+                user_email: currentUserEmail, 
+                utr_number: utr, 
+                screenshot_base64: compressedProofBase64, 
+                status: "Pending", 
+                plan_name: selectedPremiumPlan ? selectedPremiumPlan.name : "",
+                plan_price: selectedPremiumPlan ? selectedPremiumPlan.price : "",
+                plan_limit: selectedPremiumPlan ? selectedPremiumPlan.limit : "",
+                timestamp: Date.now()
+            });
+            
+            showToast("Verification pending. Admin will upgrade you soon.");
+            premiumModal.style.display = "none"; 
+            utrInput.value = ""; 
+            proofInput.value = "";
+            compressedProofBase64 = ""; 
+            previewProof.style.display = "none"; 
+            previewProof.src = "";
+            selectedPremiumPlan = null;
+            
+        } catch (e) { 
+            showToast("Network error. Failed to submit proof."); 
+        } finally {
+            hideGlobalSpinner();
+            btnSubmitUtr.disabled = false;
+            btnSubmitUtr.innerText = originalText;
+        }
+    };
+
+    // --- TRANSLATOR LOGIC ---
+    btnTranslate.onclick = () => {
+        const text = inputText.value.trim();
+        if (!text) { showToast("Please enter some text"); return; }
+
+        const sourceLang = sourceLangSelect.value;
+        const targetLang = targetLangSelect.value;
+        const isGaroInvolved = (sourceLang === "Garo" || targetLang === "Garo");
+
+        checkLimitAndProceed(async () => {
+            btnTranslate.disabled = true;
+            const normalizedText = text.toLowerCase().trim();
+            outputText.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding: 20px;"><div class="spinner-circle small"></div><div style="font-size:14px; color:var(--secondary);">Translating...</div></div>`;
+
+            try {
+                // Ensure no cache fetch from Firestore
+                const q = query(collection(db, "translations"), where("normalized", "==", normalizedText));
+                const querySnapshot = await getDocsFromServer(q);
+                let foundTranslation = null;
+
+                querySnapshot.forEach((doc) => {
+                    const data = doc.data();
+                    if ((data.source_lang || "English") === sourceLang && (data.target_lang || "Garo") === targetLang) {
+                        foundTranslation = data.translated;
+                    }
+                });
+
+                if (foundTranslation) {
+                    typeWriterEffect(outputText, foundTranslation, 15, () => { btnTranslate.disabled = false; });
+                    return;
+                }
+
+                outputText.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding: 20px;"><div class="spinner-circle small"></div><div style="font-size:14px; color:var(--secondary);">Translating...</div></div>`;
+                
+                let prompt = `Translate the following ${sourceLang} text to ${targetLang} language. Provide ONLY the exact translation, no explanations. `;
+                
+                if (targetLang === "Garo") {
+                    prompt = `Translate the following ${sourceLang} text to perfectly written Garo language (A·chikku). Provide ONLY the exact translation, no explanations. `;
+                } else if (["Hindi", "Bengali", "Assamese"].includes(targetLang)) {
+                    prompt += `IMPORTANT: Write the translation STRICTLY in the Roman/English alphabet (transliteration). Do NOT use native scripts (like Devanagari or Bengali script). `;
+                }
+                prompt += `Text to translate: ${text}`;
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                    body: JSON.stringify({ contents: [{ role: "user", parts: [{ text: prompt }] }] }),
+                    cache: 'no-store'
+                });
+
+                const data = await response.json();
+                const aiResult = data.candidates[0].content.parts[0].text;
+                
+                typeWriterEffect(outputText, aiResult, 15, () => { btnTranslate.disabled = false; });
+
+                if (isGaroInvolved) {
+                    await addDoc(collection(db, "translations"), {
+                        original: text, normalized: normalizedText, translated: aiResult,
+                        source_lang: sourceLang, target_lang: targetLang, timestamp: Date.now()
+                    });
+                }
+
+            } catch (e) {
+                outputText.innerText = "Error: Check server connection.";
+                btnTranslate.disabled = false;
+                logAdminAlert("Translation Failure: " + e.message);
+            }
+        });
+    };
+
+    // --- AI CHAT LOGIC ---
+    btnSendChat.onclick = () => {
+        if (btnSendChat.disabled) return;
+        const userText = inputChat.value.trim();
+        if (!userText) return;
+
+        inputChat.value = "";
+        
+        if (chatHistory.length === 0) {
+            const systemContext = `System Instruction: You are an extremely advanced AI Assistant. You MUST strictly reply in the Garo language (A·chikku). Try extremely hard to construct perfect spelling, grammar, and native vocabulary for the Garo language. Never speak English unless the user explicitly asks you to speak in English. IMPORTANT: You were created and programmed exclusively by developer 'Mr Bush X'. If anyone asks who made you, reply stating 'Mr Bush X'.`;
+            chatHistory.push({ role: "user", parts: [{ text: systemContext }] });
+            chatHistory.push({ role: "model", parts: [{ text: "Understood." }] });
+        }
+        
+        addChatMessage(userText, true, false);
+        showTypingIndicator();
+
+        checkLimitAndProceed(async () => {
+            try {
+                chatHistory.push({ role: "user", parts: [{ text: userText }] });
+
+                let payloadHistory = [];
+                if (chatHistory.length > 8) { 
+                    payloadHistory = [chatHistory[0], chatHistory[1], ...chatHistory.slice(-6)];
+                } else {
+                    payloadHistory = [...chatHistory];
+                }
+
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${dynamicApiKey}`, {
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                    body: JSON.stringify({ contents: payloadHistory }),
+                    cache: 'no-store'
+                });
+
+                const data = await response.json();
+                const aiResponse = data.candidates[0].content.parts[0].text;
+
+                chatHistory.push({ role: "model", parts: [{ text: aiResponse }] });
+                
+                hideTypingIndicator();
+                addChatMessage(aiResponse, false, true);
+                
+                await saveSessionHistory(userText);
+
+                await addDoc(collection(db, "ai_chat_logs"), {
+                    user_text: userText, ai_response: aiResponse, timestamp: Date.now()
+                });
+            } catch (e) {
+                hideTypingIndicator();
+                addChatMessage("Connection Error. Server might be under load.", false, false);
+                logAdminAlert("Chat Failure: " + e.message);
+            }
+        });
+    };
+
+    async function saveSessionHistory(lastUserMessage) {
+        try {
+            const timestamp = Date.now();
+            if (!currentSessionId) {
+                let title = lastUserMessage.substring(0, 30);
+                if (lastUserMessage.length > 30) title += "...";
+                
+                const sessionRef = await addDoc(collection(db, "chat_sessions"), {
+                    user_email: currentUserEmail, 
+                    title: title,
+                    updated_at: timestamp,
+                    history: chatHistory
+                });
+                currentSessionId = sessionRef.id;
+            } else {
+                await updateDoc(doc(db, "chat_sessions", currentSessionId), {
+                    updated_at: timestamp,
+                    history: chatHistory
+                });
+            }
+        } catch (e) { console.error("Session saving error", e); }
+    }
+
+    inputChat.addEventListener("keypress", (e) => { 
+        if (e.key === "Enter") { e.preventDefault(); btnSendChat.click(); } 
+    });
+
+    // --- CHAT HISTORY UI LOGIC ---
+    function formatHistoryDate(ms) {
+        if (!ms) return "";
+        const date = new Date(ms);
+        return date.toLocaleDateString() + ' • ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    }
+
+    btnOpenHistory.onclick = async () => {
+        chatHistoryScreen.style.display = "flex";
+        historyListContainer.innerHTML = `<div style="flex:1; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:12px; min-height:200px;"><div class="spinner-circle"></div><div style="font-size:13px; color:var(--secondary); font-weight: 600;">Loading History...</div></div>`;
+        
+        try {
+            const q = query(collection(db, "chat_sessions"), where("user_email", "==", currentUserEmail));
+            const snap = await getDocsFromServer(q); // Force server fetch (No Cache)
+            let sessions = [];
+            snap.forEach(doc => { sessions.push({ id: doc.id, ...doc.data() }); });
+            
+            sessions.sort((a, b) => b.updated_at - a.updated_at);
+            
+            if (sessions.length === 0) {
+                historyListContainer.innerHTML = `<div class="empty-history">No past chat history found.</div>`;
+                return;
+            }
+            
+            historyListContainer.innerHTML = "";
+            sessions.forEach(session => {
+                const item = document.createElement("div");
+                item.className = "history-item";
+                item.innerHTML = `
+                    <div class="history-title">${session.title || "New Chat"}</div>
+                    <div class="history-date">${formatHistoryDate(session.updated_at)}</div>
+                `;
+                item.onclick = () => loadChatSession(session.id, session.history);
+                historyListContainer.appendChild(item);
+            });
+        } catch (e) {
+            historyListContainer.innerHTML = `<div class="empty-history">Failed to load history. Network issue.</div>`;
+        }
+    };
+
+    btnCloseHistory.onclick = () => { chatHistoryScreen.style.display = "none"; };
+
+    function loadChatSession(sessionId, loadedHistory) {
+        currentSessionId = sessionId;
+        chatHistory = loadedHistory || [];
+        chatScroll.innerHTML = ""; 
+        
+        let foundAny = false;
+        chatHistory.forEach(msg => {
+            const text = msg.parts[0].text;
+            if (msg.role === "user") {
+                if (text.startsWith("System Instruction:")) return; 
+                addChatMessage(text, true, false);
+                foundAny = true;
+            } else if (msg.role === "model") {
+                if (text === "Understood.") return; 
+                addChatMessage(text, false, false);
+                foundAny = true;
+            }
+        });
+        
+        if (!foundAny) {
+            const initialGreeting = "Na·a namengama? I am your advanced AI Assistant. I can understand and speak English, but I specialize perfectly in the Garo language (A·chikku). How can I help you today?";
+            addChatMessage(initialGreeting, false, false);
+        }
+
+        chatHistoryScreen.style.display = "none";
+        switchTab("chat");
+    }
+
+</script>
+</body>
+</html>
