@@ -7,7 +7,6 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* (CSS remains exactly the same) */
         :root {
             --primary: #4361EE;
             --secondary: #8D99AE;
@@ -54,6 +53,13 @@
             transition: height 0.2s ease;
         }
 
+        /* --- Pulse Animation matches Java R.anim.pulse --- */
+        @keyframes pulse-anim {
+            0% { transform: scale(1); opacity: 1; }
+            50% { transform: scale(1.15); opacity: 0.85; text-shadow: 0 8px 24px rgba(67, 97, 238, 0.4); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
         /* --- Center Data Loading Circle Animation --- */
         .spinner-circle {
             width: 36px;
@@ -95,7 +101,7 @@
             height: 100%; width: 100%; background: var(--bg-light); position: absolute; 
             top: 0; left: 0; z-index: 200; transition: opacity 0.4s ease;
         }
-        .splash-logo { font-size: 54px; color: var(--primary); margin-bottom: 16px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); }
+        .splash-logo { font-size: 54px; color: var(--primary); margin-bottom: 16px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); animation: pulse-anim 1.5s infinite ease-in-out; }
         .splash-title { font-size: 28px; font-weight: 800; color: var(--text-dark); letter-spacing: -0.5px; }
 
         /* --- Login Screen --- */
@@ -105,7 +111,9 @@
             padding: 20px; text-align: center; position: absolute; top: 0; left: 0; z-index: 50;
             overflow-y: auto;
         }
-        .login-logo { font-size: 50px; color: var(--primary); margin-bottom: 16px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); }
+        
+        /* Apply Native Pulse to HTML Login Logo */
+        .login-logo { font-size: 50px; color: var(--primary); margin-bottom: 16px; text-shadow: 0 4px 12px rgba(67, 97, 238, 0.2); animation: pulse-anim 1.5s infinite ease-in-out;}
         .login-title { font-size: 28px; font-weight: 800; color: var(--text-dark); margin-bottom: 8px; letter-spacing: -0.5px;}
         .login-subtitle { font-size: 14px; color: var(--secondary); margin-bottom: 24px; line-height: 1.5; padding: 0 20px;}
         
@@ -494,7 +502,7 @@
 
     <!-- SPLASH SCREEN -->
     <div id="splashScreen">
-        <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
+        <i class="fa-solid fa-sparkles splash-logo"></i>
         <h2 class="splash-title">Garo AI</h2>
     </div>
 
@@ -896,8 +904,7 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getFirestore, doc, getDoc, getDocFromServer, collection, query, where, getDocs, getDocsFromServer, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    // We import signInWithPopup just for web fallbacks, but native Android Bridge will do the heavy lifting
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDaakCgzUcXHVEV_OlXFnTjZc7ptKhB8gg",
@@ -914,7 +921,6 @@
     const analytics = getAnalytics(app);
     const db = getFirestore(app);
     const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
 
     const CURRENT_APP_VERSION = "1.0.1";
     let currentUserEmail = "";
@@ -1080,7 +1086,6 @@
         setTimeout(() => { toast.className = toast.className.replace("show", ""); }, 3000);
     }
 
-    // --- FIREBASE CUSTOM AUTH ERROR MESSAGES ---
     function getAuthErrorMessage(code) {
         switch (code) {
             case 'auth/invalid-email': return "Invalid email format. Please check your email.";
@@ -1102,43 +1107,57 @@
     }
 
     // =========================================================
-    // --- ANDROID NATIVE LOGIN BRIDGE ---
-    // This allows the HTML App to instantly connect to Android's SharedPreferences
+    // --- ANDROID NATIVE LOGIN BRIDGE INTEGRATION ---
     // =========================================================
-    const NATIVE_SECRET_SUFFIX = "_GaroNativeSecureAuth2026!"; // Secret string to generate secure DB login
+    // This connects to the Java code you provided instead of web popups
+    const NATIVE_SECRET_SUFFIX = "_GaroNativeSecureAuth2026!"; 
     
-    async function checkNativeLogin() {
+    // Global function Android can call to pass the email back to HTML
+    window.onNativeLoginSuccess = async function(email) {
+        if (!email) {
+            showToast("Native Login Cancelled.");
+            return;
+        }
+        
+        showGlobalSpinner();
+        let safeEmail = email;
+        
+        // Handle the "Guest User" fallback from your Java code
+        if (email === "Guest User") {
+            safeEmail = "guest_" + Math.floor(Math.random() * 100000) + "@garo-ai.com";
+        }
+        
+        // Create a deterministic dummy password so the user can interact securely with Firebase Database
+        const fakePassword = btoa(safeEmail).substring(0, 10) + NATIVE_SECRET_SUFFIX;
+        
+        try {
+            await signInWithEmailAndPassword(auth, safeEmail, fakePassword);
+        } catch (error) {
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                try {
+                    await createUserWithEmailAndPassword(auth, safeEmail, fakePassword);
+                } catch (e) {
+                    console.error("Silent native auth creation failed", e);
+                    hideGlobalSpinner();
+                    showToast("Error linking native account to server.");
+                }
+            } else {
+                console.error("Silent native auth failed", error);
+                hideGlobalSpinner();
+            }
+        }
+    };
+
+    // If the Activity restarts, instantly grab the email from Android preferences
+    async function checkNativeLoginOnBoot() {
         if (window.AndroidBridge && window.AndroidBridge.getNativeUserEmail) {
             const nativeEmail = window.AndroidBridge.getNativeUserEmail();
-            
             if (nativeEmail && nativeEmail !== "null") {
-                showGlobalSpinner();
-                // Create a deterministic dummy password so the user can interact securely with Firebase Database
-                const fakePassword = btoa(nativeEmail).substring(0, 10) + NATIVE_SECRET_SUFFIX;
-                
-                try {
-                    // Sign in silently to Firebase
-                    await signInWithEmailAndPassword(auth, nativeEmail, fakePassword);
-                } catch (error) {
-                    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
-                        // Create the silent backend account if it doesn't exist yet
-                        try {
-                            await createUserWithEmailAndPassword(auth, nativeEmail, fakePassword);
-                        } catch (e) {
-                            console.error("Silent native auth creation failed", e);
-                            hideGlobalSpinner();
-                        }
-                    } else {
-                        console.error("Silent native auth failed", error);
-                        hideGlobalSpinner();
-                    }
-                }
+                window.onNativeLoginSuccess(nativeEmail);
             }
         }
     }
-
-    // Call native check immediately on HTML load
-    checkNativeLogin();
+    checkNativeLoginOnBoot();
 
     // =========================================================
     // --- AUTHENTICATION STATE OBSERVER & LOGIC ---
@@ -1147,10 +1166,11 @@
         if (user) {
             const isEmailAuth = user.providerData.some(p => p.providerId === 'password');
             
-            // Native Users from Android are trusted. They bypass email verification.
+            // Native Users from Android are trusted. They bypass HTML email verification.
             let isNativeUser = false;
             if (window.AndroidBridge && window.AndroidBridge.getNativeUserEmail) {
-                if (window.AndroidBridge.getNativeUserEmail() === user.email) {
+                let nativeE = window.AndroidBridge.getNativeUserEmail();
+                if (nativeE === user.email || user.email.startsWith("guest_")) {
                     isNativeUser = true;
                 }
             }
@@ -1171,7 +1191,6 @@
                 currentUserUid = user.uid;
 
                 if (!appInitialized) {
-                    // Update splash screen to represent real fetching
                     splashScreen.innerHTML = `
                         <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
                         <h2 class="splash-title"></h2>
@@ -1192,7 +1211,6 @@
                     verifyEmailScreen.style.display = "none";
                     appMain.style.display = "flex";
                     
-                    // Reset splash screen DOM for clean future usage
                     splashScreen.innerHTML = `
                         <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
                         <h2 class="splash-title">Garo AI</h2>
@@ -1369,20 +1387,13 @@
             .catch(error => { showToast(getAuthErrorMessage(error.code)); });
     };
 
-    // Google Login - Bridges to Native if available, else standard web popup
+    // THIS CALLS YOUR EXACT JAVA CODE DIRECTLY
     btnGoogleLogin.onclick = () => {
         if (window.AndroidBridge && window.AndroidBridge.startGoogleLogin) {
-            // Tell Android to launch the Account Picker Activity natively!
+            // Android triggers the bottom sheet Google Account Chooser
             window.AndroidBridge.startGoogleLogin();
         } else {
-            // Web Browser Fallback
-            showGlobalSpinner();
-            signInWithPopup(auth, provider).then((result) => {
-                hideGlobalSpinner();
-            }).catch(error => {
-                hideGlobalSpinner();
-                showToast("Login Failed: " + error.message);
-            });
+            showToast("Native Java bridge missing. Check your @JavascriptInterface.");
         }
     };
 
@@ -1399,7 +1410,6 @@
     async function initMainApp(user) {
         setupProfileData(user);
         
-        // Block UI and force a real server fetch with NO CACHE to ensure parameters are live
         try {
             const configRef = doc(db, "settings", "app_config");
             const docSnap = await getDocFromServer(configRef);
@@ -1612,7 +1622,6 @@
     }
 
     function selectPlanAndShowQR(plan) {
-        // Secondary secure check in case Admin turns it off while user has modal open
         if (!isMembershipEnabled) {
             plansListModal.style.display = "none";
             openInfoModal('Upgrades Temporarily Disabled', membershipDisabledMessage, false);
@@ -2262,7 +2271,6 @@
     btnSubmitUtr.onclick = async () => {
         if (btnSubmitUtr.disabled) return;
         
-        // Final Security check on submit in case admin disables it while user writes UTR
         if (!isMembershipEnabled) {
             premiumModal.style.display = "none";
             openInfoModal('Upgrades Temporarily Disabled', membershipDisabledMessage, false);
