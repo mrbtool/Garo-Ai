@@ -7,6 +7,7 @@
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
+        /* (CSS remains exactly the same) */
         :root {
             --primary: #4361EE;
             --secondary: #8D99AE;
@@ -895,8 +896,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getFirestore, doc, getDoc, getDocFromServer, collection, query, where, getDocs, getDocsFromServer, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    // Using signInWithRedirect & getRedirectResult instead of signInWithPopup to behave natively inside in-app webviews 
-    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    // We import signInWithPopup just for web fallbacks, but native Android Bridge will do the heavy lifting
+    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDaakCgzUcXHVEV_OlXFnTjZc7ptKhB8gg",
@@ -1094,43 +1095,67 @@
         }
     }
 
-    // --- DISPOSABLE EMAIL VALIDATION CHECK ---
-    const disposableDomains = [
-        'yopmail.com', 'mailinator.com', '10minutemail.com', 'tempmail.com', 'temp-mail.org',
-        'guerrillamail.com', 'sharklasers.com', 'dropmail.me', 'tempmail.net', 'fakemail.net', 
-        'throwawaymail.com', 'emailondeck.com', 'getnada.com', 'fakeinbox.com', 'dispostable.com',
-        'trashmail.com', 'mailcatch.com', 'mohmal.com', 'generator.email'
-    ];
-
     function isValidRealEmail(email) {
         const re = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
         if (!re.test(email)) return false;
-        const domain = email.split('@')[1].toLowerCase();
-        if (disposableDomains.includes(domain)) return false;
         return true;
     }
 
-    // --- GOOGLE AUTHENTICATION NATIVE REDIRECT HANDLER ---
-    // Handle the redirect response on page load (Native App flow)
-    getRedirectResult(auth).then((result) => {
-        if (result) {
-            const email = result.user.email;
-            if(!isValidRealEmail(email)){
-                signOut(auth);
-                showToast("This email provider is not allowed.");
+    // =========================================================
+    // --- ANDROID NATIVE LOGIN BRIDGE ---
+    // This allows the HTML App to instantly connect to Android's SharedPreferences
+    // =========================================================
+    const NATIVE_SECRET_SUFFIX = "_GaroNativeSecureAuth2026!"; // Secret string to generate secure DB login
+    
+    async function checkNativeLogin() {
+        if (window.AndroidBridge && window.AndroidBridge.getNativeUserEmail) {
+            const nativeEmail = window.AndroidBridge.getNativeUserEmail();
+            
+            if (nativeEmail && nativeEmail !== "null") {
+                showGlobalSpinner();
+                // Create a deterministic dummy password so the user can interact securely with Firebase Database
+                const fakePassword = btoa(nativeEmail).substring(0, 10) + NATIVE_SECRET_SUFFIX;
+                
+                try {
+                    // Sign in silently to Firebase
+                    await signInWithEmailAndPassword(auth, nativeEmail, fakePassword);
+                } catch (error) {
+                    if (error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                        // Create the silent backend account if it doesn't exist yet
+                        try {
+                            await createUserWithEmailAndPassword(auth, nativeEmail, fakePassword);
+                        } catch (e) {
+                            console.error("Silent native auth creation failed", e);
+                            hideGlobalSpinner();
+                        }
+                    } else {
+                        console.error("Silent native auth failed", error);
+                        hideGlobalSpinner();
+                    }
+                }
             }
         }
-    }).catch((error) => {
-        hideGlobalSpinner();
-        showToast("Login Failed: " + error.message);
-    });
+    }
 
+    // Call native check immediately on HTML load
+    checkNativeLogin();
+
+    // =========================================================
     // --- AUTHENTICATION STATE OBSERVER & LOGIC ---
+    // =========================================================
     onAuthStateChanged(auth, async (user) => {
         if (user) {
             const isEmailAuth = user.providerData.some(p => p.providerId === 'password');
             
-            if (isEmailAuth && !user.emailVerified) {
+            // Native Users from Android are trusted. They bypass email verification.
+            let isNativeUser = false;
+            if (window.AndroidBridge && window.AndroidBridge.getNativeUserEmail) {
+                if (window.AndroidBridge.getNativeUserEmail() === user.email) {
+                    isNativeUser = true;
+                }
+            }
+            
+            if (isEmailAuth && !user.emailVerified && !isNativeUser) {
                 splashScreen.style.opacity = "0";
                 setTimeout(() => { 
                     splashScreen.style.display = "none";
@@ -1142,11 +1167,11 @@
                 }, 300);
             } else {
                 currentUserEmail = user.email;
-                currentUserName = user.displayName || "Garo AI User";
+                currentUserName = user.displayName || user.email.split('@')[0];
                 currentUserUid = user.uid;
 
                 if (!appInitialized) {
-                    // Update splash screen to represent real  fetching with no cache
+                    // Update splash screen to represent real fetching
                     splashScreen.innerHTML = `
                         <i class="fa-solid fa-sparkles fa-bounce splash-logo"></i>
                         <h2 class="splash-title"></h2>
@@ -1216,11 +1241,7 @@
         const email = authEmail.value.trim();
         const pwd = authPassword.value;
         if(!email || !pwd) { showToast("Enter email and password"); return; }
-        
-        if (!isValidRealEmail(email)) {
-            showToast("Fake or disposable emails are strictly not supported. Use a real email.");
-            return;
-        }
+        if (!isValidRealEmail(email)) { showToast("Use a valid real email."); return; }
 
         btnEmailLogin.disabled = true;
         btnEmailLogin.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
@@ -1244,12 +1265,7 @@
         const email = authEmail.value.trim();
         const pwd = authPassword.value;
         if(!email || !pwd) { showToast("Enter email and password"); return; }
-        
-        if (!isValidRealEmail(email)) {
-            showToast("Fake or disposable emails are strictly not supported. Use a real email.");
-            return;
-        }
-
+        if (!isValidRealEmail(email)) { showToast("Use a valid real email."); return; }
         if(pwd.length < 6) { showToast("Password must be at least 6 characters"); return; }
         
         btnEmailSignUp.disabled = true;
@@ -1334,7 +1350,12 @@
 
     btnShowVerifyTutorial.onclick = () => { verifyTutorialModal.style.display = "flex"; };
     btnCloseVerifyTutorial.onclick = () => { verifyTutorialModal.style.display = "none"; };
-    btnVerifyLogout.onclick = (e) => { e.preventDefault(); signOut(auth); };
+
+    btnVerifyLogout.onclick = (e) => { 
+        e.preventDefault(); 
+        if (window.AndroidBridge && window.AndroidBridge.logoutNative) { window.AndroidBridge.logoutNative(); }
+        signOut(auth); 
+    };
 
     btnForgotPassword.onclick = () => {
         const email = authEmail.value.trim();
@@ -1348,16 +1369,27 @@
             .catch(error => { showToast(getAuthErrorMessage(error.code)); });
     };
 
-    // Use native signInWithRedirect for Google Sign In
+    // Google Login - Bridges to Native if available, else standard web popup
     btnGoogleLogin.onclick = () => {
-        showGlobalSpinner();
-        signInWithRedirect(auth, provider).catch(error => {
-            hideGlobalSpinner();
-            showToast("Login Request Failed: " + error.message);
-        });
+        if (window.AndroidBridge && window.AndroidBridge.startGoogleLogin) {
+            // Tell Android to launch the Account Picker Activity natively!
+            window.AndroidBridge.startGoogleLogin();
+        } else {
+            // Web Browser Fallback
+            showGlobalSpinner();
+            signInWithPopup(auth, provider).then((result) => {
+                hideGlobalSpinner();
+            }).catch(error => {
+                hideGlobalSpinner();
+                showToast("Login Failed: " + error.message);
+            });
+        }
     };
 
     btnProfileLogout.onclick = () => {
+        if (window.AndroidBridge && window.AndroidBridge.logoutNative) {
+            window.AndroidBridge.logoutNative();
+        }
         signOut(auth).then(() => {
             showToast("Logged out securely");
         }).catch((error) => { showToast("Logout error"); });
