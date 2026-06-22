@@ -895,7 +895,8 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-analytics.js";
     import { getFirestore, doc, getDoc, getDocFromServer, collection, query, where, getDocs, getDocsFromServer, addDoc, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-    import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+    // *** Updated Auth imports to include signInWithRedirect and getRedirectResult ***
+    import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, sendEmailVerification } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyDaakCgzUcXHVEV_OlXFnTjZc7ptKhB8gg",
@@ -1108,6 +1109,22 @@
         if (disposableDomains.includes(domain)) return false;
         return true;
     }
+
+    // *** Added Google Login Redirect Result Handler ***
+    // This catches the Google login successfully returning from the browser redirect
+    getRedirectResult(auth).then((result) => {
+        if (result) {
+            hideGlobalSpinner();
+            const email = result.user.email;
+            if(!isValidRealEmail(email)){
+                signOut(auth);
+                showToast("This email provider is not allowed.");
+            }
+        }
+    }).catch((error) => {
+        hideGlobalSpinner();
+        showToast("Google Login Failed: " + error.message);
+    });
 
     // --- AUTHENTICATION STATE OBSERVER & LOGIC ---
     onAuthStateChanged(auth, async (user) => {
@@ -1332,18 +1349,13 @@
             .catch(error => { showToast(getAuthErrorMessage(error.code)); });
     };
 
+    // *** Updated Google Login Trigger ***
     btnGoogleLogin.onclick = () => {
         showGlobalSpinner();
-        signInWithPopup(auth, provider).then((result) => {
+        // Uses redirect instead of popup for WebView/Mobile compatibility
+        signInWithRedirect(auth, provider).catch(error => {
             hideGlobalSpinner();
-            const email = result.user.email;
-            if(!isValidRealEmail(email)){
-                signOut(auth);
-                showToast("This email provider is not allowed.");
-            }
-        }).catch(error => {
-            hideGlobalSpinner();
-            showToast("Login Failed: " + error.message);
+            showToast("Redirect Failed: " + error.message);
         });
     };
 
